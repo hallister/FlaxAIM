@@ -62,7 +62,6 @@ public static class InputMappingCompiler
                 Gamepad = InputGamepadIndex.All
             };
 
-            Debug.Log($"---- Action bound key: {binding.Key}");
             processedActions[actionName] = config;
         }
     }
