@@ -3,7 +3,7 @@
 	"Version": "1.0",
 	"Company": "",
 	"Copyright": "",
-	"GameTarget": "FlaxAdaptiveInputPluginTarget",
+	"GameTarget": "FlaxAdaptiveInputTarget",
 	"EditorTarget": "FlaxAdaptiveInputEditorTarget",
 	"References": [
 		{
