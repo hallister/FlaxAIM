@@ -1,0 +1,13 @@
+{
+	"ID": "f0e71e3466e64fc8b6a7bf03e26539b7",
+	"TypeName": "FlaxAIM.InputAction",
+	"EngineBuild": 6915,
+	"Data": {
+	"ID": "f0e71e34-66e6-4fc8-b6a7-bf03e26539b7",
+	"Name": "Pause",
+	"ActionType": 0,
+	"ConsumeInput": true,
+	"Modifiers": [],
+	"Triggers": []
+}
+}

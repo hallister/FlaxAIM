@@ -1,0 +1,178 @@
+{
+	"ID": "6fee2e9d3ecb470e890445cb6429642c",
+	"TypeName": "FlaxEngine.SceneAsset",
+	"EngineBuild": 6915,
+	"Data": [
+		{
+			"ID": "6fee2e9d3ecb470e890445cb6429642c",
+			"TypeName": "FlaxEngine.Scene",
+			"Name": "Demo"
+		},
+		{
+			"ID": "797c35347ddf4b7a85b1319d4fb6d512",
+			"TypeName": "FlaxEngine.DirectionalLight",
+			"ParentID": "6fee2e9d3ecb470e890445cb6429642c",
+			"Name": "Sun",
+			"Transform": {
+				"Translation": {
+					"X": 40.0,
+					"Y": 160.0,
+					"Z": 0.0
+				},
+				"Orientation": {
+					"X": 0.3826834559440613,
+					"Y": 0.0,
+					"Z": 0.0,
+					"W": 0.9238795042037964
+				}
+			}
+		},
+		{
+			"ID": "a39170684adc465f8374e1a022c6f940",
+			"TypeName": "FlaxEngine.Sky",
+			"ParentID": "6fee2e9d3ecb470e890445cb6429642c",
+			"Name": "Sky",
+			"Transform": {
+				"Translation": {
+					"X": 40.0,
+					"Y": 150.0,
+					"Z": 0.0
+				}
+			},
+			"Sun": "797c35347ddf4b7a85b1319d4fb6d512"
+		},
+		{
+			"ID": "c803802926f248c19079383ca19c8b66",
+			"TypeName": "FlaxEngine.SkyLight",
+			"ParentID": "6fee2e9d3ecb470e890445cb6429642c",
+			"Name": "SkyLight",
+			"Brightness": 2.5
+		},
+		{
+			"ID": "67e3b1f86dd840288e72f02bed3104fd",
+			"TypeName": "FlaxEngine.StaticModel",
+			"ParentID": "6fee2e9d3ecb470e890445cb6429642c",
+			"Name": "Floor",
+			"Transform": {
+				"Scale": {
+					"X": 20.0,
+					"Y": 1.0,
+					"Z": 20.0
+				}
+			},
+			"Model": "b43f0f8f4aaba3f3156896a5a22ba493",
+			"Buffer": {
+				"Entries": [
+					{
+						"Material": "1771b53343d461faacdf2c8581b1fdbb",
+						"ShadowsMode": 3,
+						"Visible": true,
+						"ReceiveDecals": true
+					}
+				]
+			}
+		},
+		{
+			"ID": "75ca8e571fd747af9c60c49a1ad48051",
+			"TypeName": "FlaxEngine.Camera",
+			"ParentID": "6fee2e9d3ecb470e890445cb6429642c",
+			"Name": "Camera",
+			"Transform": {
+				"Translation": {
+					"X": 0.0,
+					"Y": 1100.0,
+					"Z": -1400.0
+				},
+				"Orientation": {
+					"X": 0.3255681544571567,
+					"Y": 0.0,
+					"Z": 0.0,
+					"W": 0.9455185755993168
+				}
+			}
+		},
+		{
+			"ID": "4c81ffd4b77b467095b4bcc87a915fb3",
+			"TypeName": "FlaxEngine.EmptyActor",
+			"ParentID": "6fee2e9d3ecb470e890445cb6429642c",
+			"Name": "Player",
+			"Transform": {
+				"Translation": {
+					"X": 0.0,
+					"Y": 50.0,
+					"Z": 0.0
+				}
+			}
+		},
+		{
+			"ID": "7b5ebc9392b94fa4a9adbab1945d2260",
+			"TypeName": "FlaxEngine.StaticModel",
+			"ParentID": "4c81ffd4b77b467095b4bcc87a915fb3",
+			"Name": "Body",
+			"Transform": {
+				"Translation": {
+					"X": 0.0,
+					"Y": 50.0,
+					"Z": 0.0
+				},
+				"Scale": {
+					"X": 0.6,
+					"Y": 1.0,
+					"Z": 0.6
+				}
+			},
+			"Model": "b43f0f8f4aaba3f3156896a5a22ba493",
+			"Buffer": {
+				"Entries": [
+					{
+						"Material": "1771b53343d461faacdf2c8581b1fdbb",
+						"ShadowsMode": 3,
+						"Visible": true,
+						"ReceiveDecals": true
+					}
+				]
+			}
+		},
+		{
+			"ID": "2905a2386d24410ab3ebe016376c759e",
+			"TypeName": "FlaxAIM.InputManager",
+			"ParentID": "4c81ffd4b77b467095b4bcc87a915fb3",
+			"V": {}
+		},
+		{
+			"ID": "c910d6a5fd4e4a078994b8597edb8404",
+			"TypeName": "FlaxAIM.Examples.DemoPlayer",
+			"ParentID": "4c81ffd4b77b467095b4bcc87a915fb3",
+			"V": {
+	"GameplayContext": "89449d99d6b64d3aa5b45c8a087b2399",
+	"MenuContext": "24fee651047049df85d3d5195d8c03a2",
+	"MoveAction": "b4634bf6b6394810b56ee5ceeb849611",
+	"JumpAction": "3ca8a440d378441fac58fe4aa6fa24de",
+	"SprintAction": "0af621cad9c0498eab1f7b59fd170a0f",
+	"SlideAction": "64f07632018f4095a181fbc089f52ec0",
+	"SpinAction": "8e3ca9b1d7314ad6aa5aaf0c043b04c5",
+	"PauseAction": "f0e71e3466e64fc8b6a7bf03e26539b7",
+	"MenuConfirmAction": "842ab6a46a78461ba4a27854dd47e192",
+	"Body": "7b5ebc9392b94fa4a9adbab1945d2260"
+}
+		},
+		{
+			"ID": "a9d420a5b5c24d0982d3ae2a21335355",
+			"TypeName": "FlaxAIM.Examples.InputHud",
+			"ParentID": "4c81ffd4b77b467095b4bcc87a915fb3",
+			"V": {
+	"Player": "c910d6a5fd4e4a078994b8597edb8404",
+	"Actions": [
+		"b4634bf6b6394810b56ee5ceeb849611",
+		"3ca8a440d378441fac58fe4aa6fa24de",
+		"0af621cad9c0498eab1f7b59fd170a0f",
+		"64f07632018f4095a181fbc089f52ec0",
+		"8e3ca9b1d7314ad6aa5aaf0c043b04c5",
+		"f0e71e3466e64fc8b6a7bf03e26539b7",
+		"03b049089bfb4c73af03219cf3e90e65",
+		"842ab6a46a78461ba4a27854dd47e192"
+	]
+}
+		}
+	]
+}

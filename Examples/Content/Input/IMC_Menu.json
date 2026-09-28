@@ -1,0 +1,161 @@
+{
+	"ID": "24fee651047049df85d3d5195d8c03a2",
+	"TypeName": "FlaxAIM.InputMappingContext",
+	"EngineBuild": 6915,
+	"Data": {
+	"ContextName": "Menu",
+	"Mappings": [
+		{
+			"InputAction": "03b049089bfb4c73af03219cf3e90e65",
+			"InputMapping": [
+				{
+					"Target": 1,
+					"UseAxis": true,
+					"AxisType": 9,
+					"Key": 0,
+					"GamepadButton": 0,
+					"KeyPositive": 68,
+					"KeyNegative": 65,
+					"GamepadPositiveButton": 0,
+					"GamepadNegativeButton": 0,
+					"AxisDeadZone": 0.1,
+					"AxisSensitivity": 10.0,
+					"AxisGravity": 10.0,
+					"AxisScale": 1.0,
+					"AxisSnap": true,
+					"Modifiers": [],
+					"Triggers": []
+				},
+				{
+					"Target": 2,
+					"UseAxis": true,
+					"AxisType": 9,
+					"Key": 0,
+					"GamepadButton": 0,
+					"KeyPositive": 87,
+					"KeyNegative": 83,
+					"GamepadPositiveButton": 0,
+					"GamepadNegativeButton": 0,
+					"AxisDeadZone": 0.1,
+					"AxisSensitivity": 10.0,
+					"AxisGravity": 10.0,
+					"AxisScale": 1.0,
+					"AxisSnap": true,
+					"Modifiers": [],
+					"Triggers": []
+				},
+				{
+					"Target": 1,
+					"UseAxis": true,
+					"AxisType": 3,
+					"Key": 0,
+					"GamepadButton": 0,
+					"KeyPositive": 0,
+					"KeyNegative": 0,
+					"GamepadPositiveButton": 0,
+					"GamepadNegativeButton": 0,
+					"AxisDeadZone": 0.0,
+					"AxisSensitivity": 1.0,
+					"AxisGravity": 0.0,
+					"AxisScale": 1.0,
+					"AxisSnap": false,
+					"Modifiers": [],
+					"Triggers": []
+				},
+				{
+					"Target": 2,
+					"UseAxis": true,
+					"AxisType": 4,
+					"Key": 0,
+					"GamepadButton": 0,
+					"KeyPositive": 0,
+					"KeyNegative": 0,
+					"GamepadPositiveButton": 0,
+					"GamepadNegativeButton": 0,
+					"AxisDeadZone": 0.0,
+					"AxisSensitivity": 1.0,
+					"AxisGravity": 0.0,
+					"AxisScale": 1.0,
+					"AxisSnap": false,
+					"Modifiers": [],
+					"Triggers": []
+				}
+			]
+		},
+		{
+			"InputAction": "842ab6a46a78461ba4a27854dd47e192",
+			"InputMapping": [
+				{
+					"Target": 0,
+					"UseAxis": false,
+					"AxisType": 9,
+					"Key": 32,
+					"GamepadButton": 0,
+					"KeyPositive": 0,
+					"KeyNegative": 0,
+					"GamepadPositiveButton": 0,
+					"GamepadNegativeButton": 0,
+					"AxisDeadZone": 0.1,
+					"AxisSensitivity": 1.0,
+					"AxisGravity": 0.0,
+					"AxisScale": 1.0,
+					"AxisSnap": false,
+					"Modifiers": [],
+					"Triggers": [
+						{
+							"$type": "FlaxAIM.Triggers.TriggerPressed, FlaxAIM.CSharp",
+							"ActuationThreshold": 0.5
+						}
+					]
+				},
+				{
+					"Target": 0,
+					"UseAxis": false,
+					"AxisType": 9,
+					"Key": 13,
+					"GamepadButton": 0,
+					"KeyPositive": 0,
+					"KeyNegative": 0,
+					"GamepadPositiveButton": 0,
+					"GamepadNegativeButton": 0,
+					"AxisDeadZone": 0.1,
+					"AxisSensitivity": 1.0,
+					"AxisGravity": 0.0,
+					"AxisScale": 1.0,
+					"AxisSnap": false,
+					"Modifiers": [],
+					"Triggers": [
+						{
+							"$type": "FlaxAIM.Triggers.TriggerPressed, FlaxAIM.CSharp",
+							"ActuationThreshold": 0.5
+						}
+					]
+				},
+				{
+					"Target": 0,
+					"UseAxis": false,
+					"AxisType": 9,
+					"Key": 0,
+					"GamepadButton": 13,
+					"KeyPositive": 0,
+					"KeyNegative": 0,
+					"GamepadPositiveButton": 0,
+					"GamepadNegativeButton": 0,
+					"AxisDeadZone": 0.1,
+					"AxisSensitivity": 1.0,
+					"AxisGravity": 0.0,
+					"AxisScale": 1.0,
+					"AxisSnap": false,
+					"Modifiers": [],
+					"Triggers": [
+						{
+							"$type": "FlaxAIM.Triggers.TriggerPressed, FlaxAIM.CSharp",
+							"ActuationThreshold": 0.5
+						}
+					]
+				}
+			]
+		}
+	]
+}
+}

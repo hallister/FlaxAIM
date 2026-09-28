@@ -100,7 +100,14 @@ public struct InputActionEntry()
 {
     [Tooltip("The abstract Input Action asset this mapping fulfills.")]
     public JsonAssetReference<InputAction> InputAction;
-    
+
+    /// <summary>
+    /// An action that isn't an asset, for contexts built in code. Takes precedence over <see cref="InputAction"/>.
+    /// Not serialized.
+    /// </summary>
+    [NoSerialize, HideInEditor]
+    public InputAction RuntimeAction;
+
     [Collection(Display = CollectionAttribute.DisplayType.Header)]
     public List<InputMappingEntry> InputMapping = [];
     

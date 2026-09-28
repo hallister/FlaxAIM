@@ -7,11 +7,25 @@
 *.HotReload.*
 Source/*.Gen.*
 
+# Examples project (Examples/FlaxAIMExamples.flaxproj)
+/Examples/Binaries/
+/Examples/Cache/
+/Examples/Logs/
+/Examples/Output/
+/Examples/Screenshots/
+/Examples/Source/obj/
+/Examples/Source/*.Gen.*
+
+# Unit test build output
+/Tests/**/bin/
+/Tests/**/obj/
+
 # Local files
 imgui.ini
 
 # Ignore Visual Studio project files (generated locally)
 *.csproj
+!Tests/**/*.csproj
 *.sln
 launchSettings.json
 

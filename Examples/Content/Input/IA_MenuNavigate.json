@@ -1,0 +1,20 @@
+{
+	"ID": "03b049089bfb4c73af03219cf3e90e65",
+	"TypeName": "FlaxAIM.InputAction",
+	"EngineBuild": 6915,
+	"Data": {
+	"ID": "03b04908-9bfb-4c73-af03-219cf3e90e65",
+	"Name": "MenuNavigate",
+	"ActionType": 2,
+	"ConsumeInput": true,
+	"Modifiers": [
+		{
+			"$type": "FlaxAIM.Modifiers.ModifierDeadZone, FlaxAIM.CSharp",
+			"Type": 0,
+			"LowerThreshold": 0.2,
+			"UpperThreshold": 0.95
+		}
+	],
+	"Triggers": []
+}
+}

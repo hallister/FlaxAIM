@@ -1,0 +1,13 @@
+{
+	"ID": "3ca8a440d378441fac58fe4aa6fa24de",
+	"TypeName": "FlaxAIM.InputAction",
+	"EngineBuild": 6915,
+	"Data": {
+	"ID": "3ca8a440-d378-441f-ac58-fe4aa6fa24de",
+	"Name": "Jump",
+	"ActionType": 0,
+	"ConsumeInput": true,
+	"Modifiers": [],
+	"Triggers": []
+}
+}

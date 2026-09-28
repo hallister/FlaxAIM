@@ -8,11 +8,8 @@ using FlaxEngine;
 
 namespace FlaxAIM;
 
-public partial class InputManager
+public partial class InputProcessor
 {
-    [Tooltip("Magnitude a binding with no triggers must reach to trigger its action.")]
-    public float DefaultActuationThreshold = 0.1f;
-
     private readonly Dictionary<Guid, ActionStateTracker> _trackers = [];
     private readonly List<Guid> _staleTrackers = [];
 
@@ -26,14 +23,18 @@ public partial class InputManager
         (TriggerEvent.Canceled,  EnhancedInputActionState.Canceled),
     ];
 
-    public override void OnUpdate()
+    /// <summary>
+    /// Evaluates every action for this frame and dispatches callbacks. Does nothing while disabled.
+    /// </summary>
+    public void Update(float deltaTime)
     {
+        if (!IsEnabled) return;
+
         _isUpdating = true;
         try
         {
             foreach (var tracker in _trackers.Values) tracker.MoveToNextFrame();
 
-            var deltaTime = Time.DeltaTime;
             foreach (var compiledAction in _compiled.Actions)
             {
                 ProcessAction(compiledAction, deltaTime);
@@ -49,7 +50,7 @@ public partial class InputManager
         if (_rebuildPending)
         {
             _rebuildPending = false;
-            RebuildVirtualMappings();
+            RebuildMappings();
         }
     }
 
@@ -166,9 +167,10 @@ public partial class InputManager
     /// </summary>
     private static Float3 ReadBinding(CompiledBinding binding, InputActionType actionType)
     {
+        var backend = VirtualInputRegistry.Backend;
         var raw = binding.IsAxis
-            ? Input.GetAxis(binding.VirtualName)
-            : Input.GetAction(binding.VirtualName) ? 1f : 0f;
+            ? backend.GetAxis(binding.VirtualName)
+            : backend.GetAction(binding.VirtualName) ? 1f : 0f;
 
         var value = binding.Component switch
         {

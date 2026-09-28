@@ -9,7 +9,7 @@ public class TriggerHold : InputTrigger
     public float HoldTimeThreshold = 1.0f;
     private float _currentHoldTime;
 
-    public override EnhancedInputActionState UpdateState(InputManager manager, InputAction action, float deltaTime, float magnitude)
+    public override EnhancedInputActionState UpdateState(InputProcessor input, InputAction action, float deltaTime, float magnitude)
     {
         if (IsActuated(magnitude))
         {

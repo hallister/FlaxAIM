@@ -1,0 +1,12 @@
+{
+	"ID": "b977939b436cc20f2cc674aaf1c1cd78",
+	"TypeName": "FlaxEditor.Content.Settings.GameSettings",
+	"EngineBuild": 6915,
+	"Data": {
+	"ProductName": "FlaxAIM Examples",
+	"CompanyName": "Justin Hall",
+	"Version": "1.0",
+	"FirstScene": "6fee2e9d3ecb470e890445cb6429642c",
+	"NoSplashScreen": true
+}
+}

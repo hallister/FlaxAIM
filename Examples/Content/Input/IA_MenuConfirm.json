@@ -1,0 +1,13 @@
+{
+	"ID": "842ab6a46a78461ba4a27854dd47e192",
+	"TypeName": "FlaxAIM.InputAction",
+	"EngineBuild": 6915,
+	"Data": {
+	"ID": "842ab6a4-6a78-461b-a4a2-7854dd47e192",
+	"Name": "MenuConfirm",
+	"ActionType": 0,
+	"ConsumeInput": true,
+	"Modifiers": [],
+	"Triggers": []
+}
+}

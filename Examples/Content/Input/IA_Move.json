@@ -1,0 +1,20 @@
+{
+	"ID": "b4634bf6b6394810b56ee5ceeb849611",
+	"TypeName": "FlaxAIM.InputAction",
+	"EngineBuild": 6915,
+	"Data": {
+	"ID": "b4634bf6-b639-4810-b56e-e5ceeb849611",
+	"Name": "Move",
+	"ActionType": 2,
+	"ConsumeInput": true,
+	"Modifiers": [
+		{
+			"$type": "FlaxAIM.Modifiers.ModifierDeadZone, FlaxAIM.CSharp",
+			"Type": 0,
+			"LowerThreshold": 0.2,
+			"UpperThreshold": 0.95
+		}
+	],
+	"Triggers": []
+}
+}

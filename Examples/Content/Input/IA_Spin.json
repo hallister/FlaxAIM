@@ -1,0 +1,13 @@
+{
+	"ID": "8e3ca9b1d7314ad6aa5aaf0c043b04c5",
+	"TypeName": "FlaxAIM.InputAction",
+	"EngineBuild": 6915,
+	"Data": {
+	"ID": "8e3ca9b1-d731-4ad6-aa5a-af0c043b04c5",
+	"Name": "Spin",
+	"ActionType": 0,
+	"ConsumeInput": true,
+	"Modifiers": [],
+	"Triggers": []
+}
+}

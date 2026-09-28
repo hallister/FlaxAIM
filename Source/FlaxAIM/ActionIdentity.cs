@@ -15,6 +15,12 @@ internal static class ActionIdentity
     private static readonly string InputActionTypeName = typeof(InputAction).FullName;
 
     /// <summary>
+    /// Finds the ID of the asset an action instance was loaded from, or null. Searches the loaded content by
+    /// default; tests (which run without the engine) replace it.
+    /// </summary>
+    internal static Func<InputAction, Guid?> AssetLookup = FindAssetId;
+
+    /// <summary>
     /// Records the asset an action instance came from. Called by the compiler, which has the asset reference.
     /// </summary>
     public static Guid Register(JsonAssetReference<InputAction> reference, InputAction action)
@@ -30,7 +36,7 @@ internal static class ActionIdentity
     {
         if (Cache.TryGetValue(action, out var cached)) return cached.Value;
 
-        var id = FindAssetId(action) ?? action.ID;
+        var id = AssetLookup(action) ?? action.ID;
         Cache.AddOrUpdate(action, new StrongBox<Guid>(id));
         return id;
     }

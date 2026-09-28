@@ -24,8 +24,8 @@ public interface IInputTrigger {}
 /// </summary>
 /// <remarks>
 /// Trigger objects stored in an <see cref="InputMappingContext"/> asset are templates. Each
-/// <see cref="InputManager"/> works on its own copies (see <see cref="CreateInstance"/>), so runtime state
-/// kept in fields is never shared between managers, contexts or play sessions.
+/// <see cref="InputProcessor"/> works on its own copies (see <see cref="CreateInstance"/>), so runtime state
+/// kept in fields is never shared between processors, contexts or play sessions.
 /// </remarks>
 public class InputTrigger : IInputTrigger
 {
@@ -51,11 +51,11 @@ public class InputTrigger : IInputTrigger
     /// <see cref="EnhancedInputActionState.Ongoing"/> or <see cref="EnhancedInputActionState.Triggered"/>;
     /// other values are treated as None.
     /// </summary>
-    /// <param name="manager">The manager evaluating the trigger.</param>
+    /// <param name="input">The processor evaluating the trigger (use it to query other actions).</param>
     /// <param name="action">The action the binding belongs to.</param>
     /// <param name="deltaTime">Frame delta time in seconds.</param>
     /// <param name="magnitude">The binding's modified magnitude this frame.</param>
-    public virtual EnhancedInputActionState UpdateState(InputManager manager, InputAction action, float deltaTime, float magnitude)
+    public virtual EnhancedInputActionState UpdateState(InputProcessor input, InputAction action, float deltaTime, float magnitude)
     {
         return IsActuated(magnitude) ? EnhancedInputActionState.Triggered : EnhancedInputActionState.None;
     }
@@ -79,9 +79,9 @@ public class InputTrigger : IInputTrigger
         return instance;
     }
 
-    internal EnhancedInputActionState Evaluate(InputManager manager, InputAction action, float deltaTime, float magnitude)
+    internal EnhancedInputActionState Evaluate(InputProcessor input, InputAction action, float deltaTime, float magnitude)
     {
-        var state = UpdateState(manager, action, deltaTime, magnitude);
+        var state = UpdateState(input, action, deltaTime, magnitude);
         PreviousMagnitude = magnitude;
         return state;
     }

@@ -1,0 +1,15 @@
+using Flax.Build;
+using Flax.Build.NativeCpp;
+
+public class FlaxAIMExamplesEditor : GameEditorModule
+{
+    /// <inheritdoc />
+    public override void Setup(BuildOptions options)
+    {
+        base.Setup(options);
+
+        options.PublicDependencies.Add("FlaxAIMExamples");
+
+        BuildNativeCode = false;
+    }
+}

@@ -6,7 +6,7 @@ using FlaxEngine;
 
 namespace FlaxAIM;
 
-public partial class InputManager
+public partial class InputProcessor
 {
     private readonly Dictionary<ActionBindingKey, List<RegisteredCallbackHandler>> _boundActions = new();
 
@@ -29,7 +29,7 @@ public partial class InputManager
         {
             var actionId = ActionIdentity.Of(action);
             if (_tagActions.TryGetValue(identifyingTag, out var existingActionId) && existingActionId != actionId)
-                Debug.LogWarning($"[InputManager] Tag {identifyingTag} was already bound to another action. GetActionValue({identifyingTag}) now returns {action.Name}.");
+                InputLog.Warning($"Tag {InputLog.TagName(identifyingTag)} was already bound to another action. GetActionValue now returns {action.Name} for it.");
 
             _tagActions[identifyingTag] = actionId;
         }
@@ -70,7 +70,7 @@ public partial class InputManager
             Action<Float2> c => v => c(v.Axis2D),
             Action<Float3> c => v => c(v.Axis3D),
             Action<ProcessedInputActionValue> c => c,
-            _ => throw new ArgumentException($"[InputManager] BindAction<{typeof(T).Name}> is not supported. Use bool, float, Float2, Float3 or ProcessedInputActionValue."),
+            _ => throw new ArgumentException($"BindAction<{typeof(T).Name}> is not supported. Use bool, float, Float2, Float3 or ProcessedInputActionValue."),
         };
 
         return AddHandler(action, targetState, Tag.Default, callback, invoke);

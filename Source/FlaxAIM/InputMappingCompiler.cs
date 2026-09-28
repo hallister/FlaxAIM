@@ -95,10 +95,12 @@ public static class InputMappingCompiler
 
             foreach (var actionEntry in context.Mappings)
             {
-                var action = actionEntry.InputAction.Instance;
+                var action = actionEntry.RuntimeAction ?? actionEntry.InputAction.Instance;
                 if (action == null) continue;
 
-                var actionId = ActionIdentity.Register(actionEntry.InputAction, action);
+                var actionId = actionEntry.RuntimeAction != null
+                    ? ActionIdentity.Of(action)
+                    : ActionIdentity.Register(actionEntry.InputAction, action);
                 if (!actionsById.TryGetValue(actionId, out var compiledAction))
                 {
                     compiledAction = CompileAction(action, actionId);
@@ -140,7 +142,7 @@ public static class InputMappingCompiler
         map.ActionConfigs = actionConfigs.ToArray();
         map.AxisConfigs = axisConfigs.ToArray();
 
-        Debug.Log($"[InputManager] Compiled {contextsByPriority.Count} context(s): {map.Actions.Count} action(s), {actionConfigs.Count + axisConfigs.Count} binding(s).");
+        InputLog.Info($"Compiled {contextsByPriority.Count} context(s): {map.Actions.Count} action(s), {actionConfigs.Count + axisConfigs.Count} binding(s).");
         return map;
     }
 
@@ -189,7 +191,7 @@ public static class InputMappingCompiler
                     triggers.Add(trigger.CreateInstance());
                     break;
                 default:
-                    Debug.LogWarning($"[InputManager] {owner}: trigger {template} is not an InputTrigger and was ignored.");
+                    InputLog.Warning($"{owner}: trigger {template} is not an InputTrigger and was ignored.");
                     break;
             }
         }
@@ -200,9 +202,11 @@ public static class InputMappingCompiler
     {
         foreach (var trigger in triggers)
         {
-            if (trigger is not TriggerChord chord || chord.ChordAction.Instance is not { } chordAction) continue;
+            if (trigger is not TriggerChord chord || chord.ResolvedChordAction is not { } chordAction) continue;
 
-            var chordId = ActionIdentity.Register(chord.ChordAction, chordAction);
+            var chordId = chord.RuntimeChordAction != null
+                ? ActionIdentity.Of(chordAction)
+                : ActionIdentity.Register(chord.ChordAction, chordAction);
             if (chordId != compiledAction.Id) compiledAction.Dependencies.Add(chordId);
         }
     }
@@ -261,9 +265,9 @@ public static class InputMappingCompiler
         if (component < channelCount)
             return component;
 
-        Debug.LogWarning(target == InputAxisTarget.Auto
-            ? $"[InputManager] {context.ContextName}/{action.Name} row {row}: {action.ActionType} actions only have {channelCount} components, so row-based targeting can't place this row. Set its Target explicitly. Using X."
-            : $"[InputManager] {context.ContextName}/{action.Name} row {row}: target {target} doesn't exist on a {action.ActionType} action. Using X.");
+        InputLog.Warning(target == InputAxisTarget.Auto
+            ? $"{context.ContextName}/{action.Name} row {row}: {action.ActionType} actions only have {channelCount} components, so row-based targeting can't place this row. Set its Target explicitly. Using X."
+            : $"{context.ContextName}/{action.Name} row {row}: target {target} doesn't exist on a {action.ActionType} action. Using X.");
         return 0;
     }
 
@@ -282,7 +286,7 @@ public static class InputMappingCompiler
             if (visited.Contains(id)) return;
             if (!visiting.Add(id))
             {
-                Debug.LogWarning($"[InputManager] Chord cycle detected involving '{compiledAction.Action.Name}'. One of the chords will read the previous frame's state.");
+                InputLog.Warning($"Chord cycle detected involving '{compiledAction.Action.Name}'. One of the chords will read the previous frame's state.");
                 return;
             }
 

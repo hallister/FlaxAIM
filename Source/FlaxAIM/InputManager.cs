@@ -1,155 +1,137 @@
-using System.Collections.Generic;
-using System.Threading;
+using System;
+using FlaxAIM.Modifiers;
+using FlaxAIM.State;
+using FlaxAIM.Triggers;
 using FlaxEngine;
 
 namespace FlaxAIM;
 
+/// <summary>
+/// Adds FlaxAIM input to an actor: owns an <see cref="InputProcessor"/>, enables it with the script and updates it
+/// every frame. The methods here forward to <see cref="Processor"/>.
+/// </summary>
 // ReSharper disable once ClassNeverInstantiated.Global
-public partial class InputManager : Script
+public class InputManager : Script
 {
-    private struct ContextEntry
-    {
-        public InputMappingContext Context;
-        public int Priority;
-        public int Order;
-    }
-
-    private static int _nextManagerId;
-
     [Tooltip("Which gamepad this manager reads. Use a specific gamepad per player for local multiplayer.")]
     public InputGamepadIndex Gamepad = InputGamepadIndex.All;
 
     [Tooltip("Whether this manager reads keyboard and mouse bindings. Disable for players that only use a gamepad.")]
     public bool UseKeyboardAndMouse = true;
 
-    private readonly int _managerId = Interlocked.Increment(ref _nextManagerId);
-    private readonly List<ContextEntry> _contexts = [];
-    private int _nextContextOrder;
-    private CompiledInputMap _compiled = CompiledInputMap.Empty;
-
-    // Only an enabled manager owns virtual inputs; contexts added before OnEnable are compiled there.
-    private bool _isEnabled;
-
-    // Context changes made from callbacks during OnUpdate are compiled once the frame's evaluation has finished.
-    private bool _isUpdating;
-    private bool _rebuildPending;
-
-    public void AddInputContext(InputMappingContext context) => AddInputContext(context, 0);
+    [Tooltip("Magnitude a binding with no triggers must reach to trigger its action.")]
+    public float DefaultActuationThreshold = 0.1f;
 
     /// <summary>
-    /// Adds a context. Higher priorities are evaluated first, and their bindings consume the same inputs in lower
-    /// contexts (see <see cref="InputAction.ConsumeInput"/>). Contexts with equal priority rank by most recently added.
-    /// Adding a context that is already active updates its priority.
+    /// The processor this script drives.
     /// </summary>
-    public void AddInputContext(InputMappingContext context, int priority)
-    {
-        if (context == null) return;
-
-        var index = _contexts.FindIndex(e => e.Context == context);
-        if (index >= 0)
-        {
-            if (_contexts[index].Priority == priority) return;
-            _contexts.RemoveAt(index);
-        }
-
-        _contexts.Add(new ContextEntry { Context = context, Priority = priority, Order = _nextContextOrder++ });
-        RebuildVirtualMappings();
-    }
-
-    public void AddInputContext(InputMappingContext[] contexts)
-    {
-        if (contexts == null) return;
-
-        var changed = false;
-        foreach (var context in contexts)
-        {
-            if (context == null || HasInputContext(context)) continue;
-            _contexts.Add(new ContextEntry { Context = context, Order = _nextContextOrder++ });
-            changed = true;
-        }
-
-        if (changed) RebuildVirtualMappings();
-    }
-
-    public void RemoveInputContext(InputMappingContext context) => RemoveInputContext([context]);
-
-    public void RemoveInputContext(InputMappingContext[] contexts)
-    {
-        if (contexts == null) return;
-
-        var changed = false;
-        foreach (var context in contexts)
-        {
-            changed |= context != null && _contexts.RemoveAll(e => e.Context == context) > 0;
-        }
-
-        if (changed) RebuildVirtualMappings();
-    }
-
-    public void ClearInputContexts()
-    {
-        if (_contexts.Count == 0) return;
-        _contexts.Clear();
-        RebuildVirtualMappings();
-    }
-
-    public bool HasInputContext(InputMappingContext context) => _contexts.Exists(e => e.Context == context);
-
-    /// <summary>
-    /// Recompiles the active contexts. Call after changing context/action assets or this manager's device settings
-    /// at runtime.
-    /// </summary>
-    public void RebuildMappings() => RebuildVirtualMappings();
+    public InputProcessor Processor { get; } = new();
 
     public override void OnEnable()
     {
-        _isEnabled = true;
-        RebuildVirtualMappings();
+        SyncSettings();
+        Processor.Enable();
     }
 
-    public override void OnDisable()
+    public override void OnDisable() => Processor.Disable();
+
+    public override void OnDestroy() => Processor.Disable();
+
+    public override void OnUpdate()
     {
-        _isEnabled = false;
-        VirtualInputRegistry.Remove(this);
-        _compiled = CompiledInputMap.Empty;
-        _trackers.Clear();
+        // Picks up edits made in the editor during play; the processor only recompiles when a device setting changes
+        SyncSettings();
+        Processor.Update(Time.DeltaTime);
     }
 
-    public override void OnDestroy()
+    private void SyncSettings()
     {
-        VirtualInputRegistry.Remove(this);
+        Processor.Gamepad = Gamepad;
+        Processor.UseKeyboardAndMouse = UseKeyboardAndMouse;
+        Processor.DefaultActuationThreshold = DefaultActuationThreshold;
     }
 
-    /// <summary>
-    /// Flattens the active contexts from highest to lowest priority and
-    /// commits them to Flax Engine's live runtime input tables.
-    /// Actions that are no longer mapped are flushed (Completed/Canceled) on the next update.
-    /// </summary>
-    private void RebuildVirtualMappings()
+    // ---- Contexts ---------------------------------------------------------------------------------------------------
+
+    /// <inheritdoc cref="InputProcessor.AddInputContext(InputMappingContext)"/>
+    public void AddInputContext(InputMappingContext context) => Processor.AddInputContext(context);
+
+    /// <inheritdoc cref="InputProcessor.AddInputContext(InputMappingContext, int)"/>
+    public void AddInputContext(InputMappingContext context, int priority) => Processor.AddInputContext(context, priority);
+
+    /// <inheritdoc cref="InputProcessor.AddInputContext(InputMappingContext[])"/>
+    public void AddInputContext(InputMappingContext[] contexts) => Processor.AddInputContext(contexts);
+
+    /// <inheritdoc cref="InputProcessor.RemoveInputContext(InputMappingContext)"/>
+    public void RemoveInputContext(InputMappingContext context) => Processor.RemoveInputContext(context);
+
+    /// <inheritdoc cref="InputProcessor.RemoveInputContext(InputMappingContext[])"/>
+    public void RemoveInputContext(InputMappingContext[] contexts) => Processor.RemoveInputContext(contexts);
+
+    /// <inheritdoc cref="InputProcessor.ClearInputContexts"/>
+    public void ClearInputContexts() => Processor.ClearInputContexts();
+
+    /// <inheritdoc cref="InputProcessor.HasInputContext"/>
+    public bool HasInputContext(InputMappingContext context) => Processor.HasInputContext(context);
+
+    /// <inheritdoc cref="InputProcessor.RebuildMappings"/>
+    public void RebuildMappings()
     {
-        if (!_isEnabled) return;
-
-        if (_isUpdating)
-        {
-            _rebuildPending = true;
-            return;
-        }
-
-        var ordered = new List<ContextEntry>(_contexts);
-        ordered.Sort((a, b) => a.Priority != b.Priority ? b.Priority.CompareTo(a.Priority) : b.Order.CompareTo(a.Order));
-
-        var options = new CompileOptions
-        {
-            ManagerId = _managerId,
-            Gamepad = Gamepad,
-            UseKeyboardAndMouse = UseKeyboardAndMouse,
-        };
-
-        _compiled = InputMappingCompiler.Compile(ordered.ConvertAll(e => e.Context), options);
-
-        if (_compiled.ActionConfigs.Length + _compiled.AxisConfigs.Length > 0)
-            VirtualInputRegistry.Set(this, _compiled.ActionConfigs, _compiled.AxisConfigs);
-        else
-            VirtualInputRegistry.Remove(this);
+        SyncSettings();
+        Processor.RebuildMappings();
     }
+
+    // ---- Queries ----------------------------------------------------------------------------------------------------
+
+    /// <inheritdoc cref="InputProcessor.GetActionState"/>
+    public EnhancedInputActionState GetActionState(InputAction action) => Processor.GetActionState(action);
+
+    /// <inheritdoc cref="InputProcessor.GetActionEvents"/>
+    public TriggerEvent GetActionEvents(InputAction action) => Processor.GetActionEvents(action);
+
+    /// <inheritdoc cref="InputProcessor.GetActionValue(InputAction)"/>
+    public ProcessedInputActionValue GetActionValue(InputAction action) => Processor.GetActionValue(action);
+
+    /// <inheritdoc cref="InputProcessor.GetActionValue(Tag)"/>
+    public ProcessedInputActionValue GetActionValue(Tag bindingTag) => Processor.GetActionValue(bindingTag);
+
+    /// <inheritdoc cref="InputProcessor.GetPreviousFrameMagnitude"/>
+    public float GetPreviousFrameMagnitude(InputAction action) => Processor.GetPreviousFrameMagnitude(action);
+
+    // ---- Bindings ---------------------------------------------------------------------------------------------------
+
+    /// <inheritdoc cref="InputProcessor.BindAction(InputAction, EnhancedInputActionState, Action{Tag}, Tag)"/>
+    public InputBindingHandle BindAction(InputAction action, EnhancedInputActionState targetState, Action<Tag> callback, Tag identifyingTag)
+        => Processor.BindAction(action, targetState, callback, identifyingTag);
+
+    /// <inheritdoc cref="InputProcessor.BindAction(InputAction, EnhancedInputActionState, Action{ProcessedInputActionValue})"/>
+    public InputBindingHandle BindAction(InputAction action, EnhancedInputActionState targetState, Action<ProcessedInputActionValue> callback)
+        => Processor.BindAction(action, targetState, callback);
+
+    /// <inheritdoc cref="InputProcessor.BindAction(InputAction, EnhancedInputActionState, Action)"/>
+    public InputBindingHandle BindAction(InputAction action, EnhancedInputActionState targetState, Action callback)
+        => Processor.BindAction(action, targetState, callback);
+
+    /// <inheritdoc cref="InputProcessor.BindAction{T}(InputAction, EnhancedInputActionState, Action{T})"/>
+    public InputBindingHandle BindAction<T>(InputAction action, EnhancedInputActionState targetState, Action<T> callback)
+        => Processor.BindAction(action, targetState, callback);
+
+    /// <inheritdoc cref="InputProcessor.BindAction(InputConfig, EnhancedInputActionState, Action{Tag})"/>
+    public InputBindingHandle BindAction(InputConfig config, EnhancedInputActionState targetState, Action<Tag> callback)
+        => Processor.BindAction(config, targetState, callback);
+
+    /// <inheritdoc cref="InputProcessor.BindActions"/>
+    public InputBindingHandle BindActions(InputConfigSet configSet, EnhancedInputActionState targetState, Action<Tag> callback)
+        => Processor.BindActions(configSet, targetState, callback);
+
+    /// <inheritdoc cref="InputProcessor.UnbindAction(InputAction, EnhancedInputActionState, Delegate)"/>
+    public void UnbindAction(InputAction action, EnhancedInputActionState targetState, Delegate callback)
+        => Processor.UnbindAction(action, targetState, callback);
+
+    /// <inheritdoc cref="InputProcessor.UnbindAction(InputAction, EnhancedInputActionState, Action{Tag}, Tag)"/>
+    public void UnbindAction(InputAction action, EnhancedInputActionState targetState, Action<Tag> callback, Tag identifyingTag)
+        => Processor.UnbindAction(action, targetState, callback, identifyingTag);
+
+    /// <inheritdoc cref="InputProcessor.UnbindAll"/>
+    public void UnbindAll(object owner) => Processor.UnbindAll(owner);
 }

@@ -5,25 +5,25 @@ using FlaxAIM.State;
 namespace FlaxAIM;
 
 /// <summary>
-/// Returned by <see cref="InputManager.BindAction(InputAction, EnhancedInputActionState, Action)"/> and friends.
+/// Returned by <see cref="InputProcessor.BindAction(InputAction, EnhancedInputActionState, Action)"/> and friends.
 /// Dispose it to remove the binding(s) it represents.
 /// </summary>
 public sealed class InputBindingHandle : IDisposable
 {
     internal static readonly InputBindingHandle Empty = new(null);
 
-    private InputManager _manager;
+    private InputProcessor _processor;
     private readonly List<(ActionBindingKey Key, long Id)> _entries = [];
 
-    internal InputBindingHandle(InputManager manager)
+    internal InputBindingHandle(InputProcessor processor)
     {
-        _manager = manager;
+        _processor = processor;
     }
 
     /// <summary>
     /// True while at least one of the handle's bindings has not been disposed.
     /// </summary>
-    public bool IsBound => _manager != null && _entries.Count > 0;
+    public bool IsBound => _processor != null && _entries.Count > 0;
 
     internal void Add(ActionBindingKey key, long id) => _entries.Add((key, id));
 
@@ -35,12 +35,12 @@ public sealed class InputBindingHandle : IDisposable
 
     public void Dispose()
     {
-        if (_manager == null) return;
+        if (_processor == null) return;
 
         foreach (var (key, id) in _entries)
-            _manager.RemoveHandler(key, id);
+            _processor.RemoveHandler(key, id);
 
         _entries.Clear();
-        _manager = null;
+        _processor = null;
     }
 }

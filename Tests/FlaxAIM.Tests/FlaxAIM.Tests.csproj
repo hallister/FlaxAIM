@@ -1,0 +1,46 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Unit tests for FlaxAIM's core logic, run with plain `dotnet test` (no engine needed).
+    Building this project first builds the FlaxAIM editor target with Flax.Build, then tests the resulting
+    FlaxAIM.CSharp.dll. Pass -p:SkipFlaxBuild=true to test the existing build instead.
+    Set FLAX_ENGINE_PATH (or -p:FlaxEnginePath=...) if Flax isn't installed in the default location.
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>14.0</LangVersion>
+    <Nullable>disable</Nullable>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+
+    <FlaxEnginePath Condition="'$(FlaxEnginePath)' == ''">$(FLAX_ENGINE_PATH)</FlaxEnginePath>
+    <FlaxEnginePath Condition="'$(FlaxEnginePath)' == ''">C:\Program Files (x86)\Flax\Flax_master</FlaxEnginePath>
+    <FlaxAIMProjectDir>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..'))</FlaxAIMProjectDir>
+    <FlaxAIMBinaries>$(FlaxAIMProjectDir)\Binaries\FlaxAIMEditorTarget\Windows\x64\Development</FlaxAIMBinaries>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="NUnit" Version="4.3.2" />
+    <PackageReference Include="NUnit3TestAdapter" Version="5.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="FlaxEngine.CSharp">
+      <HintPath>$(FlaxEnginePath)\Binaries\Editor\Win64\Development\FlaxEngine.CSharp.dll</HintPath>
+    </Reference>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>$(FlaxEnginePath)\Binaries\Editor\Win64\Development\Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="FlaxAIM.CSharp">
+      <HintPath>$(FlaxAIMBinaries)\FlaxAIM.CSharp.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+  <Target Name="BuildFlaxAIM" BeforeTargets="ResolveAssemblyReferences" Condition="'$(SkipFlaxBuild)' != 'true'">
+    <Exec Command="&quot;$(FlaxEnginePath)\Binaries\Tools\Flax.Build.exe&quot; -build -mutex -workspace=&quot;$(FlaxAIMProjectDir)&quot; -arch=x64 -configuration=Development -platform=Windows -buildtargets=FlaxAIMEditorTarget"
+          StandardOutputImportance="low" />
+  </Target>
+
+</Project>

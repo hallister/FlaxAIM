@@ -1,0 +1,18 @@
+{
+	"Name": "FlaxAIM Examples",
+	"Version": "1.0",
+	"Company": "",
+	"Copyright": "",
+	"GameTarget": "FlaxAIMExamplesTarget",
+	"EditorTarget": "FlaxAIMExamplesEditorTarget",
+	"References": [
+		{
+			"Name": "$(EnginePath)/Flax.flaxproj"
+		},
+		{
+			"Name": "$(ProjectPath)/../FlaxAIM.flaxproj"
+		}
+	],
+	"DefaultScene": "6fee2e9d3ecb470e890445cb6429642c",
+	"MinEngineVersion": "0.0.6167"
+}

@@ -1,0 +1,37 @@
+{
+	"ID": "acaa95464cfc481c8ee1ed907f3bb015",
+	"TypeName": "FlaxEngine.SceneAsset",
+	"EngineBuild": 6915,
+	"Data": [
+		{
+			"ID": "acaa95464cfc481c8ee1ed907f3bb015",
+			"TypeName": "FlaxEngine.Scene",
+			"Name": "EngineTests"
+		},
+		{
+			"ID": "fc755c9f1a24414c909a764bb100f6ca",
+			"TypeName": "FlaxEngine.Camera",
+			"ParentID": "acaa95464cfc481c8ee1ed907f3bb015",
+			"Name": "Camera",
+			"Transform": {
+				"Translation": {
+					"X": 0.0,
+					"Y": 150.0,
+					"Z": -300.0
+				}
+			}
+		},
+		{
+			"ID": "c74b614aedcb4f93a4aea8acefc9b748",
+			"TypeName": "FlaxEngine.EmptyActor",
+			"ParentID": "acaa95464cfc481c8ee1ed907f3bb015",
+			"Name": "EngineTests"
+		},
+		{
+			"ID": "bba86a7b2a4b4eeaa04500ec7176d7d4",
+			"TypeName": "FlaxAIM.Samples.EngineTests.EngineTestRunner",
+			"ParentID": "c74b614aedcb4f93a4aea8acefc9b748",
+			"V": {}
+		}
+	]
+}

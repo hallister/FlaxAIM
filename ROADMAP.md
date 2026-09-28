@@ -79,9 +79,9 @@ The compiler now builds a runtime plan in which every binding has its own Flax v
 
 ## Milestone 4 — Code health, performance, docs
 
-- [ ] 🟠 **README sample doesn't work.** It assigns `InputSystem = …` but declares `InputManager`, and it never calls `AddInputContext`, so nothing fires. It also refers to a "Input Mapping Context" menu entry, while the code registers `New/Adaptive Input/Input Mapping`.
+- [x] 🟠 **README sample didn't work.** Fixed: the Getting Started snippet uses the current API (`AddInputContext`, typed `BindAction`, `UnbindAll`) and the right menu entry, and points to the examples project.
 - [x] 🟢 **Per-frame allocations.** Fixed in Milestone 1: virtual names are precomputed at compile time, and callback dispatch uses a pooled array.
-- [x] 🟢 **Log noise.** Fixed: `BindAction` no longer logs, `Compile` logs one summary line, and messages use the `[InputManager]` prefix.
+- [x] 🟢 **Log noise.** Fixed: `BindAction` no longer logs, `Compile` logs one summary line, and every message goes through `InputLog` with a `[FlaxAIM]` prefix (tests capture it via `InputLog.Output`).
 - [x] 🟢 **The missing-triggers error repeated every frame.** Fixed in Milestone 1: triggers are validated once, at compile time.
 - [ ] 🟢 **Dead code.** `TriggerConfig`, `ActionStateTracker.InputTag`, the `MyPluginEditor._button` that is never created, and the commented-out debug logs.
 - [ ] 🟢 **Naming consistency.**
@@ -90,6 +90,9 @@ The compiler now builds a runtime plan in which every binding has its own Flax v
   - `ModifierDeadzone.cs` becomes `ModifierDeadZone.cs`, and `ScaleModifier.cs` becomes `ModifierScale.cs`.
   - The plugin display name "Flax Adaptive Input" should match "FlaxAIM".
 - [ ] 🟢 **Mutable static value.** Make `ProcessedInputActionValue.Default` `static readonly`, and move the type out of the `Modifiers` namespace.
-- [ ] 🟢 **Tag comparison.** Use `Tag.Default` consistently rather than `new Tag()`.
-- [ ] 🟢 **Unit tests.** Pull the pure logic (state machine, triggers, modifiers, compiler) out of Flax dependencies where you can, and cover it with a plain .NET test project. Most of the Milestone 1 bugs would have been caught this way.
-- [ ] 🟢 **XML docs on the public API**, plus a samples folder: a character controller, a menu context push/pop, and a chord.
+- [x] 🟢 **Tag comparison.** Fixed: `Tag.Default` is used throughout.
+- [x] 🟢 **Unit tests.** Done: `Tests/FlaxAIM.Tests` (NUnit, `dotnet test`, no engine), modelled on FlaxACE's. The core moved into the engine-independent `InputProcessor`, and replaceable hooks for logging, the virtual input backend and the asset lookup let tests drive it against simulated devices. Engine tests in the examples project cover what needs the engine (see [docs/EngineTests.md](docs/EngineTests.md)).
+  - ⚠️ Breaking change: `InputTrigger.UpdateState` takes an `InputProcessor` instead of an `InputManager`.
+- [x] 🟢 **Samples.** Done: `Examples/` is a separate Flax project (modelled on FlaxACE's) with a demo scene covering a character controller, a pause menu context that consumes keys, a chord, a hold, and a HUD of action states.
+- [ ] 🟢 **XML docs on the public API.** The core types are documented; triggers, modifiers and the data types (`InputMappingEntry`, `InputActionEntry`, `ProcessedInputActionValue`) still need a pass.
+- [x] 🟢 **Contexts built in code.** Done: `InputActionEntry.RuntimeAction` and `TriggerChord.RuntimeChordAction` accept actions that aren't assets (not serialized). Tests use them, and games can build contexts procedurally.

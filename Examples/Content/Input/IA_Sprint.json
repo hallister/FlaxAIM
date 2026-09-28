@@ -1,0 +1,13 @@
+{
+	"ID": "0af621cad9c0498eab1f7b59fd170a0f",
+	"TypeName": "FlaxAIM.InputAction",
+	"EngineBuild": 6915,
+	"Data": {
+	"ID": "0af621ca-d9c0-498e-ab1f-7b59fd170a0f",
+	"Name": "Sprint",
+	"ActionType": 0,
+	"ConsumeInput": true,
+	"Modifiers": [],
+	"Triggers": []
+}
+}

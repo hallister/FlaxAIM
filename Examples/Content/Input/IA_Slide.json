@@ -1,0 +1,13 @@
+{
+	"ID": "64f07632018f4095a181fbc089f52ec0",
+	"TypeName": "FlaxAIM.InputAction",
+	"EngineBuild": 6915,
+	"Data": {
+	"ID": "64f07632-018f-4095-a181-fbc089f52ec0",
+	"Name": "Slide",
+	"ActionType": 0,
+	"ConsumeInput": true,
+	"Modifiers": [],
+	"Triggers": []
+}
+}
