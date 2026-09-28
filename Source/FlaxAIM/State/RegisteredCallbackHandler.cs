@@ -1,35 +1,22 @@
-﻿using System;
+using System;
+using FlaxAIM.Modifiers;
 using FlaxEngine;
 
 namespace FlaxAIM.State;
 
-public struct RegisteredCallbackHandler(Tag filterTag, Action<Tag> actionDelegate) : IEquatable<RegisteredCallbackHandler>
+/// <summary>
+/// A bound callback. <see cref="Callback"/> is the delegate the caller passed in (used for unbinding and ownership);
+/// <see cref="Invoke"/> adapts it to the action value.
+/// </summary>
+public readonly struct RegisteredCallbackHandler(long id, Tag filterTag, Delegate callback, Action<ProcessedInputActionValue> invoke)
 {
-    public Tag FilterTag = filterTag;
-    public readonly Action<Tag> ActionDelegate = actionDelegate;
+    public readonly long Id = id;
+    public readonly Tag FilterTag = filterTag;
+    public readonly Delegate Callback = callback;
+    internal readonly Action<ProcessedInputActionValue> Invoke = invoke;
 
-    public bool Equals(RegisteredCallbackHandler other)
-    {
-        return FilterTag.Equals(other.FilterTag) && Equals(ActionDelegate, other.ActionDelegate);
-    }
-
-    public override bool Equals(object obj)
-    {
-        return obj is RegisteredCallbackHandler other && Equals(other);
-    }
-
-    public override int GetHashCode()
-    {
-        return HashCode.Combine(FilterTag, ActionDelegate);
-    }
-
-    public static bool operator ==(RegisteredCallbackHandler left, RegisteredCallbackHandler right)
-    {
-        return left.Equals(right);
-    }
-
-    public static bool operator !=(RegisteredCallbackHandler left, RegisteredCallbackHandler right)
-    {
-        return !(left == right);
-    }
+    /// <summary>
+    /// False once the callback's owner is a Flax object (e.g. a script) that has been destroyed.
+    /// </summary>
+    internal bool IsOwnerAlive => Callback.Target is not FlaxEngine.Object owner || owner;
 }

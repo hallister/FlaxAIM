@@ -32,7 +32,17 @@ internal sealed class CompiledBinding
 internal sealed class CompiledAction
 {
     public InputAction Action;
+
+    /// <summary> Stable identity, see <see cref="ActionIdentity"/>. </summary>
+    public Guid Id;
+
     public readonly List<CompiledBinding> Bindings = [];
+
+    /// <summary> Action-level modifiers, applied to the combined value. </summary>
+    public InputModifier[] Modifiers = [];
+
+    /// <summary> Action-level triggers (cloned), evaluated against the combined value. </summary>
+    public InputTrigger[] Triggers = [];
 
     /// <summary> Actions that must be evaluated before this one (chords). </summary>
     public readonly List<Guid> Dependencies = [];
@@ -44,40 +54,55 @@ internal sealed class CompiledInputMap
 
     /// <summary> Actions in evaluation order: highest-priority context first, chord actions before their dependents. </summary>
     public readonly List<CompiledAction> Actions = [];
+
+    public ActionConfig[] ActionConfigs = [];
+    public AxisConfig[] AxisConfigs = [];
+}
+
+/// <summary>
+/// Per-manager settings that affect compilation.
+/// </summary>
+internal struct CompileOptions
+{
+    /// <summary> Unique per manager, so managers' virtual inputs never collide. </summary>
+    public int ManagerId;
+
+    public InputGamepadIndex Gamepad;
+    public bool UseKeyboardAndMouse;
 }
 
 public static class InputMappingCompiler
 {
-    private const string VirtualNamePrefix = "AIM";
-
     /// <summary>
-    /// Builds the runtime plan for a context stack and commits its virtual inputs to Flax's input tables.
+    /// Builds the runtime plan for a set of contexts, ordered from highest to lowest priority.
     /// </summary>
-    internal static CompiledInputMap Compile(List<InputMappingContext> contextStack)
+    internal static CompiledInputMap Compile(IReadOnlyList<InputMappingContext> contextsByPriority, CompileOptions options)
     {
         var map = new CompiledInputMap();
         var actionsById = new Dictionary<Guid, CompiledAction>();
-        var assetIdsByActionId = new Dictionary<Guid, Guid>();
         var actionConfigs = new List<ActionConfig>();
         var axisConfigs = new List<AxisConfig>();
 
-        // Highest priority (top of the stack) first.
-        for (var c = contextStack.Count - 1; c >= 0; c--)
+        // Inputs consumed by higher-priority contexts, and the ones this context will consume once it's done.
+        var consumed = new HashSet<int>();
+        var consumedByContext = new HashSet<int>();
+        var bindingInputs = new List<int>();
+
+        foreach (var context in contextsByPriority)
         {
-            var context = contextStack[c];
             if (context?.Mappings == null) continue;
+            consumedByContext.Clear();
 
             foreach (var actionEntry in context.Mappings)
             {
                 var action = actionEntry.InputAction.Instance;
                 if (action == null) continue;
 
-                CheckForDuplicateId(actionEntry.InputAction, action, assetIdsByActionId);
-
-                if (!actionsById.TryGetValue(action.ID, out var compiledAction))
+                var actionId = ActionIdentity.Register(actionEntry.InputAction, action);
+                if (!actionsById.TryGetValue(actionId, out var compiledAction))
                 {
-                    compiledAction = new CompiledAction { Action = action };
-                    actionsById[action.ID] = compiledAction;
+                    compiledAction = CompileAction(action, actionId);
+                    actionsById[actionId] = compiledAction;
                     map.Actions.Add(compiledAction);
                 }
 
@@ -85,74 +110,139 @@ public static class InputMappingCompiler
 
                 for (var row = 0; row < actionEntry.InputMapping.Count; row++)
                 {
-                    var entry = actionEntry.InputMapping[row];
-                    var binding = CompileBinding(context, action, entry, row, actionConfigs.Count + axisConfigs.Count);
+                    var entry = AdaptToDevices(actionEntry.InputMapping[row], options);
+
+                    bindingInputs.Clear();
+                    CollectInputs(entry, bindingInputs);
+                    if (bindingInputs.Count == 0) continue;
+                    if (bindingInputs.Exists(consumed.Contains)) continue;
+
+                    if (action.ConsumeInput) consumedByContext.UnionWith(bindingInputs);
+
+                    var ordinal = actionConfigs.Count + axisConfigs.Count;
+                    var binding = CompileBinding(context, action, entry, row, $"{VirtualInputRegistry.NamePrefix}{options.ManagerId}:{ordinal}:{action.Name}");
 
                     if (binding.IsAxis)
-                        axisConfigs.Add(CreateNativeAxisConfig(binding.VirtualName, entry));
+                        axisConfigs.Add(CreateNativeAxisConfig(binding.VirtualName, entry, options.Gamepad));
                     else
-                        actionConfigs.Add(CreateNativeActionConfig(binding.VirtualName, entry));
+                        actionConfigs.Add(CreateNativeActionConfig(binding.VirtualName, entry, options.Gamepad));
 
-                    foreach (var trigger in binding.Triggers)
-                    {
-                        if (trigger is TriggerChord chord && chord.ChordAction.Instance is { } chordAction && chordAction.ID != action.ID)
-                            compiledAction.Dependencies.Add(chordAction.ID);
-                    }
-
+                    AddChordDependencies(compiledAction, binding.Triggers);
                     compiledAction.Bindings.Add(binding);
                 }
             }
+
+            consumed.UnionWith(consumedByContext);
         }
 
         SortByDependencies(map.Actions, actionsById);
 
-        Input.ActionMappings = actionConfigs.ToArray();
-        Input.AxisMappings = axisConfigs.ToArray();
+        map.ActionConfigs = actionConfigs.ToArray();
+        map.AxisConfigs = axisConfigs.ToArray();
 
-        Debug.Log($"[InputManager] Compiled {contextStack.Count} context(s): {map.Actions.Count} action(s), {actionConfigs.Count + axisConfigs.Count} binding(s).");
+        Debug.Log($"[InputManager] Compiled {contextsByPriority.Count} context(s): {map.Actions.Count} action(s), {actionConfigs.Count + axisConfigs.Count} binding(s).");
         return map;
     }
 
-    private static CompiledBinding CompileBinding(InputMappingContext context, InputAction action, InputMappingEntry entry, int row, int ordinal)
+    private static CompiledAction CompileAction(InputAction action, Guid actionId)
     {
-        var binding = new CompiledBinding
+        var compiledAction = new CompiledAction
         {
-            VirtualName = $"{VirtualNamePrefix}{ordinal}.{action.Name}",
+            Action = action,
+            Id = actionId,
+            Modifiers = CollectModifiers(action.Modifiers),
+            Triggers = CloneTriggers(action.Triggers, action.Name),
+        };
+        AddChordDependencies(compiledAction, compiledAction.Triggers);
+        return compiledAction;
+    }
+
+    private static CompiledBinding CompileBinding(InputMappingContext context, InputAction action, InputMappingEntry entry, int row, string virtualName)
+    {
+        return new CompiledBinding
+        {
+            VirtualName = virtualName,
             IsAxis = entry.UseAxis,
             Component = ResolveComponent(context, action, entry.Target, row),
+            Modifiers = CollectModifiers(entry.Modifiers),
+            Triggers = CloneTriggers(entry.Triggers, $"{context.ContextName}/{action.Name} row {row}"),
         };
+    }
 
-        var modifiers = new List<InputModifier>();
-        if (entry.Modifiers != null)
-        {
-            foreach (var modifier in entry.Modifiers)
-            {
-                if (modifier != null) modifiers.Add(modifier);
-            }
-        }
-        binding.Modifiers = modifiers.ToArray();
+    private static InputModifier[] CollectModifiers(List<InputModifier> modifiers)
+    {
+        return modifiers == null ? [] : modifiers.FindAll(m => m != null).ToArray();
+    }
 
+    private static InputTrigger[] CloneTriggers(List<IInputTrigger> templates, string owner)
+    {
         var triggers = new List<InputTrigger>();
-        if (entry.Triggers != null)
+        if (templates == null) return [];
+
+        foreach (var template in templates)
         {
-            foreach (var template in entry.Triggers)
+            switch (template)
             {
-                switch (template)
-                {
-                    case null:
-                        break;
-                    case InputTrigger trigger:
-                        triggers.Add(trigger.CreateInstance());
-                        break;
-                    default:
-                        Debug.LogWarning($"[InputManager] {context.ContextName}/{action.Name} row {row}: trigger {template} is not an InputTrigger and was ignored.");
-                        break;
-                }
+                case null:
+                    break;
+                case InputTrigger trigger:
+                    triggers.Add(trigger.CreateInstance());
+                    break;
+                default:
+                    Debug.LogWarning($"[InputManager] {owner}: trigger {template} is not an InputTrigger and was ignored.");
+                    break;
             }
         }
-        binding.Triggers = triggers.ToArray();
+        return triggers.ToArray();
+    }
 
-        return binding;
+    private static void AddChordDependencies(CompiledAction compiledAction, InputTrigger[] triggers)
+    {
+        foreach (var trigger in triggers)
+        {
+            if (trigger is not TriggerChord chord || chord.ChordAction.Instance is not { } chordAction) continue;
+
+            var chordId = ActionIdentity.Register(chord.ChordAction, chordAction);
+            if (chordId != compiledAction.Id) compiledAction.Dependencies.Add(chordId);
+        }
+    }
+
+    /// <summary>
+    /// Strips the parts of a binding this manager doesn't read (keyboard and mouse when disabled).
+    /// </summary>
+    private static InputMappingEntry AdaptToDevices(InputMappingEntry entry, CompileOptions options)
+    {
+        if (options.UseKeyboardAndMouse) return entry;
+
+        entry.Key = KeyboardKeys.None;
+        entry.KeyPositive = KeyboardKeys.None;
+        entry.KeyNegative = KeyboardKeys.None;
+        if (entry.AxisType is InputAxisType.MouseX or InputAxisType.MouseY or InputAxisType.MouseWheel)
+            entry.AxisType = InputAxisType.KeyboardOnly;
+
+        return entry;
+    }
+
+    /// <summary>
+    /// Collects an identifier for every physical input a binding reads. Used for input consumption, and to skip
+    /// bindings that read nothing.
+    /// </summary>
+    private static void CollectInputs(InputMappingEntry entry, List<int> inputs)
+    {
+        const int keyboard = 1 << 16, gamepadButton = 2 << 16, axis = 3 << 16;
+
+        if (!entry.UseAxis)
+        {
+            if (entry.Key != KeyboardKeys.None) inputs.Add(keyboard | (int)entry.Key);
+            if (entry.GamepadButton != GamepadButton.None) inputs.Add(gamepadButton | (int)entry.GamepadButton);
+            return;
+        }
+
+        if (entry.AxisType != InputAxisType.KeyboardOnly) inputs.Add(axis | (int)entry.AxisType);
+        if (entry.KeyPositive != KeyboardKeys.None) inputs.Add(keyboard | (int)entry.KeyPositive);
+        if (entry.KeyNegative != KeyboardKeys.None) inputs.Add(keyboard | (int)entry.KeyNegative);
+        if (entry.GamepadPositiveButton != GamepadButton.None) inputs.Add(gamepadButton | (int)entry.GamepadPositiveButton);
+        if (entry.GamepadNegativeButton != GamepadButton.None) inputs.Add(gamepadButton | (int)entry.GamepadNegativeButton);
     }
 
     private static int ResolveComponent(InputMappingContext context, InputAction action, InputAxisTarget target, int row)
@@ -177,18 +267,6 @@ public static class InputMappingCompiler
         return 0;
     }
 
-    private static void CheckForDuplicateId(JsonAssetReference<InputAction> reference, InputAction action, Dictionary<Guid, Guid> assetIdsByActionId)
-    {
-        var assetId = reference.Asset?.ID ?? Guid.Empty;
-        if (assetIdsByActionId.TryGetValue(action.ID, out var existingAssetId))
-        {
-            if (existingAssetId != assetId)
-                Debug.LogError($"[InputManager] Input action '{action.Name}' ({reference.Asset?.Path}) has the same ID as another input action asset, probably because it was duplicated. They will be treated as one action. Give one of them a new ID.");
-            return;
-        }
-        assetIdsByActionId[action.ID] = assetId;
-    }
-
     /// <summary>
     /// Stable topological sort so chord actions are evaluated before the actions that depend on them.
     /// </summary>
@@ -200,7 +278,7 @@ public static class InputMappingCompiler
 
         void Visit(CompiledAction compiledAction)
         {
-            var id = compiledAction.Action.ID;
+            var id = compiledAction.Id;
             if (visited.Contains(id)) return;
             if (!visiting.Add(id))
             {
@@ -226,7 +304,7 @@ public static class InputMappingCompiler
         actions.AddRange(sorted);
     }
 
-    private static ActionConfig CreateNativeActionConfig(string name, InputMappingEntry binding)
+    private static ActionConfig CreateNativeActionConfig(string name, InputMappingEntry binding, InputGamepadIndex gamepad)
     {
         return new ActionConfig
         {
@@ -234,27 +312,26 @@ public static class InputMappingCompiler
             Mode = InputActionMode.Pressing,
             Key = binding.Key,
             GamepadButton = binding.GamepadButton,
-            Gamepad = InputGamepadIndex.All
+            Gamepad = gamepad
         };
     }
 
-    /// <summary>
-    /// Clean factory utility method to allocate native Flax configurations uniformly.
-    /// </summary>
-    private static AxisConfig CreateNativeAxisConfig(string name, InputMappingEntry binding)
+    private static AxisConfig CreateNativeAxisConfig(string name, InputMappingEntry binding, InputGamepadIndex gamepad)
     {
         return new AxisConfig
         {
             Name = name,
-            Gamepad = InputGamepadIndex.All,
-            Scale = 1.0f,
-            DeadZone = 0.1f,
+            Gamepad = gamepad,
             Axis = binding.AxisType,
             PositiveButton = binding.KeyPositive,
             NegativeButton = binding.KeyNegative,
-            Sensitivity = 1.0f,
             GamepadPositiveButton = binding.GamepadPositiveButton,
-            GamepadNegativeButton = binding.GamepadNegativeButton
+            GamepadNegativeButton = binding.GamepadNegativeButton,
+            DeadZone = binding.AxisDeadZone,
+            Sensitivity = binding.AxisSensitivity,
+            Gravity = binding.AxisGravity,
+            Scale = binding.AxisScale,
+            Snap = binding.AxisSnap,
         };
     }
 }

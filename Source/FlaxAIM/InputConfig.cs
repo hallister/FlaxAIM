@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Runtime.Serialization;
 using FlaxEngine;
 
 namespace FlaxAIM;
@@ -13,4 +15,21 @@ public class InputConfig
 
     [Tooltip("The tag passed to bound callbacks when the action triggers.")]
     public Tag InputTag;
+}
+
+/// <summary>
+/// A list of action ↔ tag links that can be bound in one call with <see cref="InputManager.BindActions"/>.
+/// </summary>
+[ContentContextMenu("New/Adaptive Input/Input Config Set")]
+public class InputConfigSet
+{
+    [Tooltip("The actions to bind, each with the tag passed to the callback.")]
+    [Collection(Display = CollectionAttribute.DisplayType.Header)]
+    public List<InputConfig> Configs = [];
+
+    [OnDeserialized]
+    internal void OnDeserialized(StreamingContext context)
+    {
+        Configs = Configs != null ? [..Configs] : [];
+    }
 }

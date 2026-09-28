@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using FlaxAIM.Modifiers;
 using FlaxAIM.State;
 using FlaxEngine;
 
@@ -12,44 +13,100 @@ public partial class InputManager
     // Resolves GetActionValue(Tag) to the action the tag was bound to.
     private readonly Dictionary<Tag, Guid> _tagActions = new();
 
+    private long _nextHandlerId;
+
     /// <summary>
     /// Registers an action callback routed strictly by its hardware execution state enum,
     /// with an explicit context tag returned as a parameter when fired.
     /// </summary>
-    public void BindAction(InputAction action, EnhancedInputActionState targetState, Action<Tag> callback, Tag identifyingTag)
+    public InputBindingHandle BindAction(InputAction action, EnhancedInputActionState targetState, Action<Tag> callback, Tag identifyingTag)
     {
-        if (action == null || callback == null) return;
+        if (action == null || callback == null) return InputBindingHandle.Empty;
 
-        Debug.Log($"[InputManager] Binding {action.Name} in state {targetState} to tag {identifyingTag}");
-
-        var key = new ActionBindingKey(action.ID, targetState);
-
-        if (!_boundActions.TryGetValue(key, out var handlerList))
-        {
-            handlerList = new List<RegisteredCallbackHandler>();
-            _boundActions[key] = handlerList;
-        }
-
-        if (!handlerList.Exists(h => h.ActionDelegate == callback && h.FilterTag == identifyingTag))
-        {
-            handlerList.Add(new RegisteredCallbackHandler(identifyingTag, callback));
-        }
+        var handle = AddHandler(action, targetState, identifyingTag, callback, _ => callback(identifyingTag));
 
         if (identifyingTag != Tag.Default)
         {
-            if (_tagActions.TryGetValue(identifyingTag, out var existingActionId) && existingActionId != action.ID)
+            var actionId = ActionIdentity.Of(action);
+            if (_tagActions.TryGetValue(identifyingTag, out var existingActionId) && existingActionId != actionId)
                 Debug.LogWarning($"[InputManager] Tag {identifyingTag} was already bound to another action. GetActionValue({identifyingTag}) now returns {action.Name}.");
 
-            _tagActions[identifyingTag] = action.ID;
+            _tagActions[identifyingTag] = actionId;
         }
+
+        return handle;
+    }
+
+    /// <summary>
+    /// Binds a callback that receives the action's full value.
+    /// </summary>
+    public InputBindingHandle BindAction(InputAction action, EnhancedInputActionState targetState, Action<ProcessedInputActionValue> callback)
+    {
+        if (action == null || callback == null) return InputBindingHandle.Empty;
+        return AddHandler(action, targetState, Tag.Default, callback, callback);
+    }
+
+    /// <summary>
+    /// Binds a callback with no parameters.
+    /// </summary>
+    public InputBindingHandle BindAction(InputAction action, EnhancedInputActionState targetState, Action callback)
+    {
+        if (action == null || callback == null) return InputBindingHandle.Empty;
+        return AddHandler(action, targetState, Tag.Default, callback, _ => callback());
+    }
+
+    /// <summary>
+    /// Binds a callback that receives the action's value as <typeparamref name="T"/>:
+    /// <see cref="bool"/> (Digital), <see cref="float"/> (Axis1D), <see cref="Float2"/> (Axis2D) or <see cref="Float3"/> (Axis3D).
+    /// </summary>
+    public InputBindingHandle BindAction<T>(InputAction action, EnhancedInputActionState targetState, Action<T> callback)
+    {
+        if (action == null || callback == null) return InputBindingHandle.Empty;
+
+        Action<ProcessedInputActionValue> invoke = callback switch
+        {
+            Action<bool> c   => v => c(v.Digital),
+            Action<float> c  => v => c(v.Axis1D),
+            Action<Float2> c => v => c(v.Axis2D),
+            Action<Float3> c => v => c(v.Axis3D),
+            Action<ProcessedInputActionValue> c => c,
+            _ => throw new ArgumentException($"[InputManager] BindAction<{typeof(T).Name}> is not supported. Use bool, float, Float2, Float3 or ProcessedInputActionValue."),
+        };
+
+        return AddHandler(action, targetState, Tag.Default, callback, invoke);
+    }
+
+    /// <summary>
+    /// Binds the action and tag from an <see cref="InputConfig"/>.
+    /// </summary>
+    public InputBindingHandle BindAction(InputConfig config, EnhancedInputActionState targetState, Action<Tag> callback)
+    {
+        if (config == null) return InputBindingHandle.Empty;
+        return BindAction(config.InputAction.Instance, targetState, callback, config.InputTag);
+    }
+
+    /// <summary>
+    /// Binds every action in an <see cref="InputConfigSet"/> to one callback, which receives the matching tag.
+    /// </summary>
+    public InputBindingHandle BindActions(InputConfigSet configSet, EnhancedInputActionState targetState, Action<Tag> callback)
+    {
+        var handle = new InputBindingHandle(this);
+        if (configSet?.Configs == null || callback == null) return handle;
+
+        foreach (var config in configSet.Configs)
+        {
+            handle.AddRange(BindAction(config, targetState, callback));
+        }
+        return handle;
     }
 
     /// <summary>
     /// Unbinds a callback from an action state, for every tag it was bound with.
     /// </summary>
-    public void UnbindAction(InputAction action, EnhancedInputActionState targetState, Action<Tag> callback)
+    public void UnbindAction(InputAction action, EnhancedInputActionState targetState, Delegate callback)
     {
-        UnbindAction(action, targetState, h => h.ActionDelegate == callback, callback);
+        if (action == null || callback == null) return;
+        RemoveHandlers(new ActionBindingKey(ActionIdentity.Of(action), targetState), h => Equals(h.Callback, callback));
     }
 
     /// <summary>
@@ -57,27 +114,69 @@ public partial class InputManager
     /// </summary>
     public void UnbindAction(InputAction action, EnhancedInputActionState targetState, Action<Tag> callback, Tag identifyingTag)
     {
-        UnbindAction(action, targetState, h => h.ActionDelegate == callback && h.FilterTag == identifyingTag, callback);
+        if (action == null || callback == null) return;
+        RemoveHandlers(new ActionBindingKey(ActionIdentity.Of(action), targetState), h => Equals(h.Callback, callback) && h.FilterTag == identifyingTag);
     }
 
-    private void UnbindAction(InputAction action, EnhancedInputActionState targetState, Predicate<RegisteredCallbackHandler> match, Action<Tag> callback)
+    /// <summary>
+    /// Removes every binding whose callback belongs to <paramref name="owner"/> (typically a script calling
+    /// <c>UnbindAll(this)</c> in its OnDestroy). Callbacks owned by destroyed Flax objects are also removed
+    /// automatically the next time they would fire.
+    /// </summary>
+    public void UnbindAll(object owner)
     {
-        if (action == null || callback == null) return;
+        if (owner == null) return;
 
-        if (!_boundActions.TryGetValue(new ActionBindingKey(action.ID, targetState), out var handlerList)) return;
+        foreach (var key in new List<ActionBindingKey>(_boundActions.Keys))
+            RemoveHandlers(key, h => ReferenceEquals(h.Callback.Target, owner));
+    }
 
-        var removedTags = new List<Tag>();
+    internal void RemoveHandler(ActionBindingKey key, long id)
+    {
+        RemoveHandlers(key, h => h.Id == id);
+    }
+
+    private InputBindingHandle AddHandler(InputAction action, EnhancedInputActionState targetState, Tag tag, Delegate callback, Action<ProcessedInputActionValue> invoke)
+    {
+        var key = new ActionBindingKey(ActionIdentity.Of(action), targetState);
+        var handle = new InputBindingHandle(this);
+
+        if (!_boundActions.TryGetValue(key, out var handlerList))
+        {
+            handlerList = new List<RegisteredCallbackHandler>();
+            _boundActions[key] = handlerList;
+        }
+
+        var existing = handlerList.FindIndex(h => Equals(h.Callback, callback) && h.FilterTag == tag);
+        if (existing >= 0)
+        {
+            handle.Add(key, handlerList[existing].Id);
+            return handle;
+        }
+
+        var id = ++_nextHandlerId;
+        handlerList.Add(new RegisteredCallbackHandler(id, tag, callback, invoke));
+        handle.Add(key, id);
+        return handle;
+    }
+
+    private void RemoveHandlers(ActionBindingKey key, Predicate<RegisteredCallbackHandler> match)
+    {
+        if (!_boundActions.TryGetValue(key, out var handlerList)) return;
+
+        List<Tag> removedTags = null;
         foreach (var handler in handlerList)
         {
-            if (match(handler)) removedTags.Add(handler.FilterTag);
+            if (match(handler) && handler.FilterTag != Tag.Default) (removedTags ??= []).Add(handler.FilterTag);
         }
-        if (removedTags.Count == 0) return;
 
-        handlerList.RemoveAll(match);
+        if (handlerList.RemoveAll(match) == 0) return;
+        if (handlerList.Count == 0) _boundActions.Remove(key);
 
+        if (removedTags == null) return;
         foreach (var tag in removedTags)
         {
-            if (!IsTagStillBound(tag, action.ID)) _tagActions.Remove(tag);
+            if (!IsTagStillBound(tag, key.ActionId)) _tagActions.Remove(tag);
         }
     }
 

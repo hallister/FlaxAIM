@@ -48,6 +48,28 @@ public struct InputMappingEntry()
     [VisibleIf(nameof(UseAxis))]
     public GamepadButton GamepadNegativeButton = GamepadButton.None;
 
+    [Space(3)]
+    [Header("Axis Settings")]
+    [VisibleIf(nameof(UseAxis))]
+    [Tooltip("Positive or negative values smaller than this register as zero.")]
+    public float AxisDeadZone = 0.1f;
+
+    [VisibleIf(nameof(UseAxis))]
+    [Tooltip("For keyboard input, how fast the value moves towards its target (units/s). For mouse delta, a multiplier on the delta.")]
+    public float AxisSensitivity = 1.0f;
+
+    [VisibleIf(nameof(UseAxis))]
+    [Tooltip("For keyboard input, how fast the value returns to zero when released (units/s).")]
+    public float AxisGravity = 0.0f;
+
+    [VisibleIf(nameof(UseAxis))]
+    [Tooltip("Multiplier applied to the axis value by Flax, before this binding's modifiers.")]
+    public float AxisScale = 1.0f;
+
+    [VisibleIf(nameof(UseAxis))]
+    [Tooltip("For keyboard input, jump to zero immediately when the opposite key is pressed.")]
+    public bool AxisSnap = false;
+
     // Flax's native JSON asset editor natively draws and manages polymorphic classes inline!
     [Collection(Display = CollectionAttribute.DisplayType.Header)]
     public List<InputModifier> Modifiers = [];

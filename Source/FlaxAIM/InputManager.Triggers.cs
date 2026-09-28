@@ -55,8 +55,7 @@ public partial class InputManager
 
     public float GetPreviousFrameMagnitude(InputAction action)
     {
-        if (action == null) return 0f;
-        return _trackers.TryGetValue(action.ID, out var tracker) ? tracker.PreviousMagnitude : 0f;
+        return TryGetTracker(action, out var tracker) ? tracker.PreviousMagnitude : 0f;
     }
 
     /// <summary>
@@ -66,8 +65,7 @@ public partial class InputManager
     /// </summary>
     public EnhancedInputActionState GetActionState(InputAction action)
     {
-        if (action == null) return EnhancedInputActionState.None;
-        return _trackers.TryGetValue(action.ID, out var tracker) ? tracker.TriggerState : EnhancedInputActionState.None;
+        return TryGetTracker(action, out var tracker) ? tracker.TriggerState : EnhancedInputActionState.None;
     }
 
     /// <summary>
@@ -75,8 +73,7 @@ public partial class InputManager
     /// </summary>
     public TriggerEvent GetActionEvents(InputAction action)
     {
-        if (action == null) return TriggerEvent.None;
-        return _trackers.TryGetValue(action.ID, out var tracker) ? tracker.Events : TriggerEvent.None;
+        return TryGetTracker(action, out var tracker) ? tracker.Events : TriggerEvent.None;
     }
 
     /// <summary>
@@ -87,7 +84,9 @@ public partial class InputManager
     public ProcessedInputActionValue GetActionValue(Tag bindingTag)
     {
         if (bindingTag == Tag.Default) return default;
-        return _tagActions.TryGetValue(bindingTag, out var actionId) ? GetActionValue(actionId) : default;
+        return _tagActions.TryGetValue(bindingTag, out var actionId) && _trackers.TryGetValue(actionId, out var tracker)
+            ? tracker.CurrentValue
+            : default;
     }
 
     /// <summary>
@@ -97,22 +96,27 @@ public partial class InputManager
     /// <returns>A structured container carrying 1D, 2D, 3D, and digital data values.</returns>
     public ProcessedInputActionValue GetActionValue(InputAction inputAction)
     {
-        return inputAction == null ? default : GetActionValue(inputAction.ID);
+        return TryGetTracker(inputAction, out var tracker) ? tracker.CurrentValue : default;
     }
 
-    private ProcessedInputActionValue GetActionValue(Guid actionId)
+    private bool TryGetTracker(InputAction action, out ActionStateTracker tracker)
     {
-        return _trackers.TryGetValue(actionId, out var tracker) ? tracker.CurrentValue : default;
+        if (action == null)
+        {
+            tracker = null;
+            return false;
+        }
+        return _trackers.TryGetValue(ActionIdentity.Of(action), out tracker);
     }
 
     private void ProcessAction(CompiledAction compiledAction, float deltaTime)
     {
         var action = compiledAction.Action;
 
-        if (!_trackers.TryGetValue(action.ID, out var tracker))
+        if (!_trackers.TryGetValue(compiledAction.Id, out var tracker))
         {
             tracker = new ActionStateTracker();
-            _trackers[action.ID] = tracker;
+            _trackers[compiledAction.Id] = tracker;
         }
         tracker.Visited = true;
 
@@ -124,27 +128,37 @@ public partial class InputManager
             var value = ReadBinding(binding, action.ActionType);
             combined = new Float3(HighestAbs(combined.X, value.X), HighestAbs(combined.Y, value.Y), HighestAbs(combined.Z, value.Z));
 
-            var bindingState = EvaluateTriggers(binding, action, deltaTime, value.Length);
+            var bindingState = EvaluateTriggers(binding.Triggers, action, deltaTime, value.Length);
             if (bindingState > state) state = bindingState;
         }
 
-        tracker.CurrentMagnitude = action.ActionType switch
+        combined = ApplyModifiers(compiledAction.Modifiers, combined, action.ActionType);
+
+        var magnitude = action.ActionType switch
         {
             InputActionType.Axis2D => new Float2(combined.X, combined.Y).Length,
             InputActionType.Axis3D => combined.Length,
             _                      => Math.Abs(combined.X),
         };
 
+        // Action-level triggers gate the bindings' result: both have to pass.
+        if (compiledAction.Triggers.Length > 0)
+        {
+            var actionState = EvaluateTriggers(compiledAction.Triggers, action, deltaTime, magnitude);
+            if (actionState < state) state = actionState;
+        }
+
+        tracker.CurrentMagnitude = magnitude;
         tracker.CurrentValue = new ProcessedInputActionValue
         {
-            Digital = tracker.CurrentMagnitude > 0f,
+            Digital = magnitude > 0f,
             Axis1D = combined.X,
             Axis2D = new Float2(combined.X, combined.Y),
             Axis3D = combined,
         };
 
         tracker.AdvanceStateMachine(state);
-        DispatchCallbacks(action.ID, tracker.Events);
+        DispatchCallbacks(compiledAction.Id, tracker);
     }
 
     /// <summary>
@@ -163,7 +177,12 @@ public partial class InputManager
             _ => new Float3(raw, 0f, 0f),
         };
 
-        foreach (var modifier in binding.Modifiers)
+        return ApplyModifiers(binding.Modifiers, value, actionType);
+    }
+
+    private static Float3 ApplyModifiers(InputModifier[] modifiers, Float3 value, InputActionType actionType)
+    {
+        foreach (var modifier in modifiers)
         {
             switch (actionType)
             {
@@ -184,17 +203,17 @@ public partial class InputManager
     }
 
     /// <summary>
-    /// Combines a binding's triggers. Any explicit trigger triggering (or, with no explicit triggers, the binding
-    /// being actuated) triggers the binding, provided every implicit trigger is also triggered.
+    /// Combines a set of triggers. Any explicit trigger triggering (or, with no explicit triggers, the input being
+    /// actuated) triggers the set, provided every implicit trigger is also triggered.
     /// </summary>
-    private EnhancedInputActionState EvaluateTriggers(CompiledBinding binding, InputAction action, float deltaTime, float magnitude)
+    private EnhancedInputActionState EvaluateTriggers(InputTrigger[] triggers, InputAction action, float deltaTime, float magnitude)
     {
         var hasExplicit = false;
         var explicitTriggered = false;
         var implicitsTriggered = true;
         var anyOngoing = false;
 
-        foreach (var trigger in binding.Triggers)
+        foreach (var trigger in triggers)
         {
             var result = trigger.Evaluate(this, action, deltaTime, magnitude);
             if (result == EnhancedInputActionState.Ongoing) anyOngoing = true;
@@ -241,37 +260,48 @@ public partial class InputManager
 
             tracker.CurrentValue = default;
             tracker.AdvanceStateMachine(EnhancedInputActionState.None);
-            DispatchCallbacks(actionId, tracker.Events);
+            DispatchCallbacks(actionId, tracker);
         }
     }
 
     /// <summary>
     /// Dispatches this frame's events to the callbacks bound to them. Handlers are snapshotted first, so
-    /// callbacks may bind, unbind or change contexts safely.
+    /// callbacks may bind, unbind or change contexts safely. Handlers owned by destroyed objects are removed.
     /// </summary>
-    private void DispatchCallbacks(Guid actionId, TriggerEvent events)
+    private void DispatchCallbacks(Guid actionId, ActionStateTracker tracker)
     {
+        var events = tracker.Events;
         if (events == TriggerEvent.None) return;
 
         foreach (var (triggerEvent, state) in DispatchOrder)
         {
             if ((events & triggerEvent) == 0) continue;
-            if (!_boundActions.TryGetValue(new ActionBindingKey(actionId, state), out var handlerList) || handlerList.Count == 0) continue;
+
+            var key = new ActionBindingKey(actionId, state);
+            if (!_boundActions.TryGetValue(key, out var handlerList) || handlerList.Count == 0) continue;
 
             var count = handlerList.Count;
             var snapshot = ArrayPool<RegisteredCallbackHandler>.Shared.Rent(count);
+            var hasDeadOwners = false;
             try
             {
                 handlerList.CopyTo(snapshot);
                 for (var i = 0; i < count; i++)
                 {
-                    snapshot[i].ActionDelegate?.Invoke(snapshot[i].FilterTag);
+                    if (!snapshot[i].IsOwnerAlive)
+                    {
+                        hasDeadOwners = true;
+                        continue;
+                    }
+                    snapshot[i].Invoke(tracker.CurrentValue);
                 }
             }
             finally
             {
                 ArrayPool<RegisteredCallbackHandler>.Shared.Return(snapshot, clearArray: true);
             }
+
+            if (hasDeadOwners) RemoveHandlers(key, h => !h.IsOwnerAlive);
         }
     }
 }

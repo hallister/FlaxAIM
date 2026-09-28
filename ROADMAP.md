@@ -37,7 +37,7 @@ The compiler now builds a runtime plan in which every binding has its own Flax v
 - [x] 🔴 **`ModifierDeadZone` did nothing for Axis1D and Axis2D.** Fixed: it now supports 1D, plus 2D and 3D in `Radial` (default) or `Axial` mode, and remaps `[Lower, Upper]` to `[0, 1]`. It no longer logs a warning every frame.
   - ⚠️ Behaviour change: values above `UpperThreshold` now become 1.0 instead of being clamped to `UpperThreshold`.
 - [x] 🟠 **`InputModifier` threw `NotImplementedException` for any overload that wasn't overridden.** Fixed: an overload that isn't overridden forwards up a dimension (float → Float2 → Float3), and Float3 passes the value through unchanged.
-- [ ] 🟠 **Radial processing of a stick is still per-axis.** Flax's `AxisConfig` is 1D, so a stick is still two bindings (X and Y), and each binding's modifiers only see its own component. A radial dead zone on those bindings therefore acts per-axis. **Fix:** add 2D stick bindings (one row reads both axes), or action-level modifiers (Milestone 2).
+- [x] 🟠 **Radial processing of a stick was per-axis.** Fixed in Milestone 2: put the dead zone in the action's own `Modifiers`, which see the combined 2D value. A binding that reads both axes of a stick in one row would still be a nice addition.
 
 ### Bindings & dispatch
 
@@ -50,21 +50,18 @@ The compiler now builds a runtime plan in which every binding has its own Flax v
 
 ## Milestone 2 — Architecture & API
 
-- [ ] 🟠 **Duplicated `InputAction` assets share an `ID`.** Virtual inputs are no longer keyed by `Name` (they now have unique per-binding names), and bindings and trackers use `InputAction.ID`. But the serialized `ID` is copied when an asset is duplicated. The compiler detects this and logs an error. **Fix:** derive the identity from the asset GUID, or regenerate `ID` on duplicate in the editor.
-- [ ] 🟠 **Global engine state.** `InputMappingCompiler.Compile` overwrites `Input.ActionMappings`/`AxisMappings`:
-  - It destroys the project's own `GameSettings` input mappings.
-  - When several `InputManager`s exist, the last one to compile wins.
-  - Nothing is restored in `OnDestroy`.
-
-  **Fix:** save and restore the original mappings. Longer term, read raw devices (`Input.GetKey`, `Input.GetGamepadAxis`, …) directly instead of going through Flax's virtual-input tables.
-- [ ] 🟢 **Real context priority and input consumption.** Priority is currently just stack order, and every context compiles into one global table, so a key mapped in both a high and a low context fires both. Add an explicit `Priority` value on `AddInputContext`, plus per-binding "consume input" so higher contexts block lower ones.
-- [ ] 🟢 **Local multiplayer.** `Gamepad = InputGamepadIndex.All` is hard-coded. Give each `InputManager` its own player/device assignment.
-- [ ] 🟢 **Bind through `InputConfig`.** `InputConfig` (action ↔ tag) exists, but no API consumes it yet. Add `BindAction(InputConfig, state, callback)`, plus a data-driven "input config set" asset that binds many actions at once.
-- [ ] 🟢 **Native binding overloads without tags.** Add `BindAction(action, state, Action<ProcessedInputActionValue>)` and a generic typed variant, so callers get the value directly (README todo #1).
-- [ ] 🟢 **Lifetime-safe bindings.** Add `UnbindAll(object owner)` and return a handle/`IDisposable` from `BindAction`, so destroyed scripts don't keep receiving callbacks.
-- [ ] 🟢 **Remove the `IInputTrigger` workaround.** Reference the `InputTrigger` base type directly if Flax's editor can draw it inline, and make it `abstract` (README todo #3).
-- [ ] 🟢 **Action-level triggers and modifiers.** Resolve the `@todo` on `InputAction` by applying them to every binding of the action.
-- [ ] 🟢 **Expose the `AxisConfig` fields that are currently fixed.** `DeadZone = 0.1`, `Sensitivity = 1`, and `Scale = 1` are set in [`CreateNativeAxisConfig`](Source/FlaxAIM/InputMappingCompiler.cs#L113) and stack on top of any modifiers.
+- [x] 🟠 **Duplicated `InputAction` assets shared an `ID`.** Fixed: actions are now identified by their asset's ID ([`ActionIdentity`](Source/FlaxAIM/ActionIdentity.cs)). The compiler records it from the asset reference, and other lookups find the owning asset once and cache the result. The serialized `ID` is only a fallback for actions created at runtime.
+- [x] 🟠 **Global engine state.** Fixed: [`VirtualInputRegistry`](Source/FlaxAIM/VirtualInputRegistry.cs) captures the project's own mappings and publishes them together with every active manager's virtual inputs. Each manager's inputs are prefixed with `AIM:<managerId>:`, so managers never collide. A manager unregisters in `OnDisable`/`OnDestroy`, and the original mappings are restored once the last one is gone.
+  - Reading raw devices directly is still an option for later, but it's no longer needed.
+- [x] 🟢 **Real context priority and input consumption.** Done: `AddInputContext(context, priority)` sorts contexts by priority, and ties go to the most recently added. `InputAction.ConsumeInput` (on by default, as in Unreal) makes an action's keys, buttons and axes unavailable to lower-priority contexts. Consumption is worked out at compile time. Also added: `HasInputContext`, `ClearInputContexts`, and `RebuildMappings`.
+  - ⚠️ Behaviour change: a key mapped in two contexts now only fires in the higher one, unless that action's `ConsumeInput` is off.
+- [x] 🟢 **Local multiplayer.** Done: each `InputManager` has a `Gamepad` index (default `All`) and a `UseKeyboardAndMouse` toggle.
+- [x] 🟢 **Bind through `InputConfig`.** Done: `BindAction(InputConfig, state, callback)`, plus a new `InputConfigSet` asset (New → Adaptive Input → Input Config Set) bound with `BindActions(set, state, callback)`.
+- [x] 🟢 **Native binding overloads without tags.** Done: `BindAction(action, state, Action)`, `BindAction(action, state, Action<ProcessedInputActionValue>)` and `BindAction<T>` for `bool`, `float`, `Float2` and `Float3`. For a method group, pass the type argument explicitly: `BindAction<Float2>(Move, state, OnMove)`.
+- [x] 🟢 **Lifetime-safe bindings.** Done: every `BindAction` returns an `InputBindingHandle` that you can dispose. `UnbindAll(owner)` removes every callback owned by an object, and callbacks whose owner is a destroyed Flax object are dropped automatically.
+- [ ] 🟢 **Remove the `IInputTrigger` workaround.** Reference the `InputTrigger` base type directly if Flax's editor can draw it inline, and make it `abstract` (README todo #3). *Not attempted:* this depends on how Flax's editor draws polymorphic lists, so it needs testing in the editor.
+- [x] 🟢 **Action-level triggers and modifiers.** Done: `InputAction.Modifiers` are applied to the combined value after the bindings' own modifiers. `InputAction.Triggers` are evaluated against the combined magnitude, and both they and the binding triggers must pass.
+- [x] 🟢 **Expose the `AxisConfig` fields that were fixed.** Done: axis bindings now have `AxisDeadZone`, `AxisSensitivity`, `AxisGravity`, `AxisScale` and `AxisSnap`. The defaults match the old hard-coded values.
 
 ---
 
@@ -84,7 +81,7 @@ The compiler now builds a runtime plan in which every binding has its own Flax v
 
 - [ ] 🟠 **README sample doesn't work.** It assigns `InputSystem = …` but declares `InputManager`, and it never calls `AddInputContext`, so nothing fires. It also refers to a "Input Mapping Context" menu entry, while the code registers `New/Adaptive Input/Input Mapping`.
 - [x] 🟢 **Per-frame allocations.** Fixed in Milestone 1: virtual names are precomputed at compile time, and callback dispatch uses a pooled array.
-- [ ] 🟢 **Log noise.** `BindAction` logs on every call (`Compile` now logs a single summary line). Put these logs behind a `Verbose` flag and use one consistent prefix (there are currently `[EnhancedInputService]`, `[EnhancedInput]`, and `[InputManager]`).
+- [x] 🟢 **Log noise.** Fixed: `BindAction` no longer logs, `Compile` logs one summary line, and messages use the `[InputManager]` prefix.
 - [x] 🟢 **The missing-triggers error repeated every frame.** Fixed in Milestone 1: triggers are validated once, at compile time.
 - [ ] 🟢 **Dead code.** `TriggerConfig`, `ActionStateTracker.InputTag`, the `MyPluginEditor._button` that is never created, and the commented-out debug logs.
 - [ ] 🟢 **Naming consistency.**
