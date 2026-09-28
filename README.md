@@ -1,4 +1,4 @@
-# Flax Adaptive Input
+# FlaxAIM: Adaptive Input Manager
 
 This project is an input manager for Flax Engine modeled after Unreal's EnhancedInputSystem.
 
@@ -44,8 +44,5 @@ An Input Action is an action tied to an input, like Jump, Move, Look, etc.
 
 Assign keys to actions.
 
-#### Todo
-1. Add a better native binding overload for BindAction so we don't have to use tags.
-2. More Triggers/Modifiers
-3. Get rid of the Trigger Interface and directly reference the abstract class.
-4. Implement ImGui overlay for debugging.
+#### Roadmap
+See [ROADMAP.md](ROADMAP.md) for known issues and planned work.

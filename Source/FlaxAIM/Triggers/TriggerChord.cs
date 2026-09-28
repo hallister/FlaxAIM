@@ -1,37 +1,37 @@
-﻿using FlaxAIM.State;
+using FlaxAIM.State;
 using FlaxEngine;
 
 namespace FlaxAIM.Triggers;
 
+/// <summary>
+/// Implicit trigger: the binding can only trigger while another action (the chord) is active.
+/// </summary>
+/// <remarks>
+/// The compiler evaluates chord actions before the actions that depend on them, so this reads the chord's
+/// state for the current frame.
+/// </remarks>
 public class TriggerChord : InputTrigger
 {
     [Tooltip("The prerequisite input action that must be active for this trigger to succeed.")]
     public JsonAssetReference<InputAction> ChordAction;
 
-    [Tooltip("The minimum state required for the chord action to be considered active.")]
+    [Tooltip("The state the chord action must be in. Triggered requires it to be triggered; Started or Ongoing also accept it while it is ongoing.")]
     public EnhancedInputActionState RequiredChordState = EnhancedInputActionState.Triggered;
-    
-    public override EnhancedInputActionState UpdateState(InputManager manager, InputAction action, float deltaTime, float rawMagnitude)
+
+    [HideInEditor, NoSerialize]
+    public override TriggerType TriggerType => TriggerType.Implicit;
+
+    public override EnhancedInputActionState UpdateState(InputManager manager, InputAction action, float deltaTime, float magnitude)
     {
         var chord = ChordAction.Instance;
         if (chord == null) return EnhancedInputActionState.None;
 
-        // Fetch the current active state machine flag for our prerequisite action
-        var activeChordState = manager.GetActionState(chord);
+        var chordState = manager.GetActionState(chord);
+        var acceptsOngoing = RequiredChordState is EnhancedInputActionState.Started or EnhancedInputActionState.Ongoing;
 
-        // If the prerequisite button/action isn't being held/triggered, this whole mapping fails
-        if (activeChordState != RequiredChordState && activeChordState != EnhancedInputActionState.Ongoing)
-        {
-            return EnhancedInputActionState.None;
-        }
+        var satisfied = chordState == EnhancedInputActionState.Triggered
+                        || (acceptsOngoing && chordState == EnhancedInputActionState.Ongoing);
 
-        // Prerequisite met! Fallback to default actuation evaluation rules
-        if (rawMagnitude >= ActuationThreshold)
-        {
-            var wasActuated = manager.GetPreviousFrameMagnitude(action) >= ActuationThreshold;
-            return wasActuated ? EnhancedInputActionState.Ongoing : EnhancedInputActionState.Triggered;
-        }
-
-        return EnhancedInputActionState.None;
+        return satisfied ? EnhancedInputActionState.Triggered : EnhancedInputActionState.None;
     }
 }

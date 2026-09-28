@@ -6,9 +6,26 @@ using FlaxEngine;
 
 namespace FlaxAIM;
 
-// Ensure your InputMappingEntry structure handles Triggers:
+/// <summary>
+/// Which component of an action's value a binding drives.
+/// </summary>
+public enum InputAxisTarget
+{
+    /// <summary>
+    /// Legacy row-based behaviour: for Axis2D/Axis3D actions row 0 drives X, row 1 drives Y and row 2 drives Z.
+    /// Digital and Axis1D actions always use X.
+    /// </summary>
+    Auto,
+    X,
+    Y,
+    Z,
+}
+
 public struct InputMappingEntry()
 {
+    [Tooltip("Which component of the action value this binding drives. Auto keeps the row-based behaviour (row 0 = X, row 1 = Y, row 2 = Z). Ignored for Digital and Axis1D actions.")]
+    public InputAxisTarget Target = InputAxisTarget.Auto;
+
     public bool UseAxis = false;
 
     [VisibleIf(nameof(UseAxis))] public InputAxisType AxisType = InputAxisType.KeyboardOnly;

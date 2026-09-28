@@ -1,4 +1,4 @@
-﻿// Example Trigger: Hold (Fires after being held for X seconds)
+// Example Trigger: Hold (Fires after being held for X seconds)
 
 using FlaxAIM.State;
 
@@ -9,9 +9,9 @@ public class TriggerHold : InputTrigger
     public float HoldTimeThreshold = 1.0f;
     private float _currentHoldTime;
 
-    public override EnhancedInputActionState UpdateState(InputManager manager, InputAction action, float deltaTime, float rawMagnitude)
+    public override EnhancedInputActionState UpdateState(InputManager manager, InputAction action, float deltaTime, float magnitude)
     {
-        if (rawMagnitude >= ActuationThreshold)
+        if (IsActuated(magnitude))
         {
             _currentHoldTime += deltaTime;
             if (_currentHoldTime >= HoldTimeThreshold)
@@ -23,5 +23,11 @@ public class TriggerHold : InputTrigger
 
         _currentHoldTime = 0.0f;
         return EnhancedInputActionState.None;
+    }
+
+    public override void Reset()
+    {
+        base.Reset();
+        _currentHoldTime = 0.0f;
     }
 }
