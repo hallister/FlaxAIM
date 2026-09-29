@@ -36,6 +36,9 @@ public struct InputMappingEntry()
     public KeyboardKeys Key = KeyboardKeys.None;
     
     [VisibleIf(nameof(UseAxis), true)]
+    public MouseButton MouseButton = MouseButton.None;
+
+    [VisibleIf(nameof(UseAxis), true)]
     public GamepadButton GamepadButton = GamepadButton.None;
 
     [Space(3)]

@@ -219,6 +219,7 @@ public static class InputMappingCompiler
         if (options.UseKeyboardAndMouse) return entry;
 
         entry.Key = KeyboardKeys.None;
+        entry.MouseButton = MouseButton.None;
         entry.KeyPositive = KeyboardKeys.None;
         entry.KeyNegative = KeyboardKeys.None;
         if (entry.AxisType is InputAxisType.MouseX or InputAxisType.MouseY or InputAxisType.MouseWheel)
@@ -233,11 +234,12 @@ public static class InputMappingCompiler
     /// </summary>
     private static void CollectInputs(InputMappingEntry entry, List<int> inputs)
     {
-        const int keyboard = 1 << 16, gamepadButton = 2 << 16, axis = 3 << 16;
+        const int keyboard = 1 << 16, gamepadButton = 2 << 16, axis = 3 << 16, mouseButton = 4 << 16;
 
         if (!entry.UseAxis)
         {
             if (entry.Key != KeyboardKeys.None) inputs.Add(keyboard | (int)entry.Key);
+            if (entry.MouseButton != MouseButton.None) inputs.Add(mouseButton | (int)entry.MouseButton);
             if (entry.GamepadButton != GamepadButton.None) inputs.Add(gamepadButton | (int)entry.GamepadButton);
             return;
         }
@@ -315,6 +317,7 @@ public static class InputMappingCompiler
             Name = name,
             Mode = InputActionMode.Pressing,
             Key = binding.Key,
+            MouseButton = binding.MouseButton,
             GamepadButton = binding.GamepadButton,
             Gamepad = gamepad
         };

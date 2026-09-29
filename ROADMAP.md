@@ -61,6 +61,7 @@ The compiler now builds a runtime plan in which every binding has its own Flax v
 - [x] 🟢 **Lifetime-safe bindings.** Done: every `BindAction` returns an `InputBindingHandle` that you can dispose. `UnbindAll(owner)` removes every callback owned by an object, and callbacks whose owner is a destroyed Flax object are dropped automatically.
 - [ ] 🟢 **Remove the `IInputTrigger` workaround.** Reference the `InputTrigger` base type directly if Flax's editor can draw it inline, and make it `abstract` (README todo #3). *Not attempted:* this depends on how Flax's editor draws polymorphic lists, so it needs testing in the editor.
 - [x] 🟢 **Action-level triggers and modifiers.** Done: `InputAction.Modifiers` are applied to the combined value after the bindings' own modifiers. `InputAction.Triggers` are evaluated against the combined magnitude, and both they and the binding triggers must pass.
+- [x] 🟢 **Mouse button bindings.** Done: a digital binding's `MouseButton` is passed to the native `ActionConfig`, takes part in input consumption like keys, and is ignored when `UseKeyboardAndMouse` is off.
 - [x] 🟢 **Expose the `AxisConfig` fields that were fixed.** Done: axis bindings now have `AxisDeadZone`, `AxisSensitivity`, `AxisGravity`, `AxisScale` and `AxisSnap`. The defaults match the old hard-coded values.
 
 ---

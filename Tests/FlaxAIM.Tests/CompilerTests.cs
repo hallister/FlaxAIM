@@ -58,6 +58,18 @@ public class CompilerTests
     }
 
     [Test]
+    public void MouseButtons_AreCopiedToTheConfig()
+    {
+        var fire = Action("Fire");
+
+        var map = InputMappingCompiler.Compile([Context("Gameplay", Map(fire, Mouse(MouseButton.Right)))], Options);
+
+        var config = map.ActionConfigs.Single();
+        Assert.That(config.MouseButton, Is.EqualTo(MouseButton.Right));
+        Assert.That(config.Key, Is.EqualTo(KeyboardKeys.None));
+    }
+
+    [Test]
     public void BindingsThatReadNothing_AreSkipped()
     {
         var jump = Action("Jump");

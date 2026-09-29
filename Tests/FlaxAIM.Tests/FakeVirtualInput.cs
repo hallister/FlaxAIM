@@ -6,7 +6,7 @@ namespace FlaxAIM.Tests;
 
 /// <summary>
 /// Stands in for Flax's virtual input system: stores the published mapping tables and answers
-/// <c>GetAction</c>/<c>GetAxis</c> by evaluating those configs against simulated keys, buttons and axes.
+/// <c>GetAction</c>/<c>GetAxis</c> by evaluating those configs against simulated keys, mouse and gamepad buttons, and axes.
 /// </summary>
 /// <remarks>
 /// Axis values are instantaneous: Flax's keyboard smoothing (sensitivity, gravity, snap) isn't simulated.
@@ -16,6 +16,7 @@ public sealed class FakeVirtualInput : IVirtualInputBackend
 {
     private readonly HashSet<KeyboardKeys> _keys = [];
     private readonly HashSet<(int Gamepad, GamepadButton Button)> _buttons = [];
+    private readonly HashSet<MouseButton> _mouseButtons = [];
     private readonly Dictionary<(int Gamepad, InputAxisType Axis), float> _axes = [];
 
     public ActionConfig[] ActionMappings { get; set; } = [];
@@ -27,6 +28,9 @@ public sealed class FakeVirtualInput : IVirtualInputBackend
     public void Press(GamepadButton button, int gamepad = 0) => _buttons.Add((gamepad, button));
     public void Release(GamepadButton button, int gamepad = 0) => _buttons.Remove((gamepad, button));
 
+    public void Press(MouseButton button) => _mouseButtons.Add(button);
+    public void Release(MouseButton button) => _mouseButtons.Remove(button);
+
     /// <summary>
     /// Sets a gamepad or mouse axis. The gamepad index is ignored for mouse axes.
     /// </summary>
@@ -36,6 +40,7 @@ public sealed class FakeVirtualInput : IVirtualInputBackend
     {
         _keys.Clear();
         _buttons.Clear();
+        _mouseButtons.Clear();
         _axes.Clear();
     }
 
@@ -45,7 +50,7 @@ public sealed class FakeVirtualInput : IVirtualInputBackend
         if (index < 0) return false;
 
         var config = ActionMappings[index];
-        return IsDown(config.Key) || IsDown(config.Gamepad, config.GamepadButton);
+        return IsDown(config.Key) || IsDown(config.MouseButton) || IsDown(config.Gamepad, config.GamepadButton);
     }
 
     public float GetAxis(string name)
@@ -65,6 +70,8 @@ public sealed class FakeVirtualInput : IVirtualInputBackend
     }
 
     private bool IsDown(KeyboardKeys key) => key != KeyboardKeys.None && _keys.Contains(key);
+
+    private bool IsDown(MouseButton button) => button != MouseButton.None && _mouseButtons.Contains(button);
 
     private bool IsDown(InputGamepadIndex gamepad, GamepadButton button)
     {

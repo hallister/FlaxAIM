@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using FlaxAIM.State;
 using FlaxEngine;
 using NUnit.Framework;
 
@@ -72,5 +73,18 @@ public abstract class InputTestBase
     protected void Advance(float seconds, float deltaTime = Frame)
     {
         for (var elapsed = 0f; elapsed < seconds - 0.0001f; elapsed += deltaTime) Tick(deltaTime);
+    }
+
+    /// <summary>
+    /// Records every event the action raises, in order.
+    /// </summary>
+    protected List<EnhancedInputActionState> RecordEvents(InputAction action)
+    {
+        var events = new List<EnhancedInputActionState>();
+        foreach (var state in new[] { EnhancedInputActionState.Started, EnhancedInputActionState.Ongoing, EnhancedInputActionState.Triggered, EnhancedInputActionState.Completed, EnhancedInputActionState.Canceled })
+        {
+            Input.BindAction(action, state, () => events.Add(state));
+        }
+        return events;
     }
 }

@@ -286,14 +286,4 @@ public class EvaluationTests : InputTestBase
 
         Assert.That(Input.GetPreviousFrameMagnitude(throttle), Is.EqualTo(0.4f));
     }
-
-    private List<S> RecordEvents(InputAction action)
-    {
-        var events = new List<S>();
-        foreach (var state in new[] { S.Started, S.Ongoing, S.Triggered, S.Completed, S.Canceled })
-        {
-            Input.BindAction(action, state, () => events.Add(state));
-        }
-        return events;
-    }
 }

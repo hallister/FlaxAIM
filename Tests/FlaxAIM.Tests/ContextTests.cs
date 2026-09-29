@@ -195,6 +195,55 @@ public class ContextTests : InputTestBase
     }
 
     [Test]
+    public void MouseButtons_TriggerActions()
+    {
+        var fire = Action("Fire");
+        Input.AddInputContext(Context("Combat", Map(fire, Mouse(MouseButton.Left))));
+        var events = RecordEvents(fire);
+
+        Devices.Press(MouseButton.Right);
+        Tick();
+        Assert.That(events, Is.Empty);
+
+        Devices.Press(MouseButton.Left);
+        Tick();
+        Devices.Release(MouseButton.Left);
+        Tick();
+        Assert.That(events, Is.EqualTo(new[] { S.Started, S.Triggered, S.Completed }));
+    }
+
+    [Test]
+    public void HigherPriorityContext_ConsumesMouseButtonsItShares()
+    {
+        var fire = Action("Fire");
+        var select = Action("Select");
+        Input.AddInputContext(Context("Combat", Map(fire, Mouse(MouseButton.Left))));
+        Input.AddInputContext(Context("Menu", Map(select, Mouse(MouseButton.Left))), 10);
+
+        Devices.Press(MouseButton.Left);
+        Tick();
+
+        Assert.That(Input.GetActionState(select), Is.EqualTo(S.Triggered));
+        Assert.That(Input.GetActionState(fire), Is.EqualTo(S.None));
+    }
+
+    [Test]
+    public void WithoutKeyboardAndMouse_MouseButtonsAreIgnored()
+    {
+        var fire = Action("Fire");
+        Input.UseKeyboardAndMouse = false;
+        Input.AddInputContext(Context("Combat", Map(fire, Mouse(MouseButton.Left), Button(GamepadButton.RightShoulder))));
+
+        Devices.Press(MouseButton.Left);
+        Tick();
+        Assert.That(Input.GetActionState(fire), Is.EqualTo(S.None));
+
+        Devices.Press(GamepadButton.RightShoulder);
+        Tick();
+        Assert.That(Input.GetActionState(fire), Is.EqualTo(S.Triggered));
+    }
+
+    [Test]
     public void AGamepadIndex_OnlyReadsThatGamepad()
     {
         Input.Gamepad = InputGamepadIndex.Gamepad1;

@@ -27,6 +27,12 @@ internal static class TestInput
         Triggers = [..triggers],
     };
 
+    public static InputMappingEntry Mouse(MouseButton button, params InputTrigger[] triggers) => new()
+    {
+        MouseButton = button,
+        Triggers = [..triggers],
+    };
+
     /// <summary>
     /// A keyboard axis: <paramref name="positive"/> gives +1, <paramref name="negative"/> gives -1.
     /// </summary>
