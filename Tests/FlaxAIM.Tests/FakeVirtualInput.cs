@@ -15,8 +15,8 @@ namespace FlaxAIM.Tests;
 public sealed class FakeVirtualInput : IVirtualInputBackend
 {
     private readonly HashSet<KeyboardKeys> _keys = [];
-    private readonly HashSet<(int Gamepad, GamepadButton Button)> _buttons = [];
     private readonly HashSet<MouseButton> _mouseButtons = [];
+    private readonly HashSet<(int Gamepad, GamepadButton Button)> _buttons = [];
     private readonly Dictionary<(int Gamepad, InputAxisType Axis), float> _axes = [];
 
     public ActionConfig[] ActionMappings { get; set; } = [];
@@ -25,11 +25,11 @@ public sealed class FakeVirtualInput : IVirtualInputBackend
     public void Press(params KeyboardKeys[] keys) => _keys.UnionWith(keys);
     public void Release(params KeyboardKeys[] keys) => _keys.ExceptWith(keys);
 
-    public void Press(GamepadButton button, int gamepad = 0) => _buttons.Add((gamepad, button));
-    public void Release(GamepadButton button, int gamepad = 0) => _buttons.Remove((gamepad, button));
-
     public void Press(MouseButton button) => _mouseButtons.Add(button);
     public void Release(MouseButton button) => _mouseButtons.Remove(button);
+
+    public void Press(GamepadButton button, int gamepad = 0) => _buttons.Add((gamepad, button));
+    public void Release(GamepadButton button, int gamepad = 0) => _buttons.Remove((gamepad, button));
 
     /// <summary>
     /// Sets a gamepad or mouse axis. The gamepad index is ignored for mouse axes.
@@ -39,8 +39,8 @@ public sealed class FakeVirtualInput : IVirtualInputBackend
     public void ReleaseAll()
     {
         _keys.Clear();
-        _buttons.Clear();
         _mouseButtons.Clear();
+        _buttons.Clear();
         _axes.Clear();
     }
 

@@ -39,12 +39,8 @@ public class CompilerTests
     public void AxisSettings_AreCopiedToTheConfig()
     {
         var throttle = Action("Throttle", InputActionType.Axis1D);
-        var binding = Axis(InputAxisType.GamepadRightTrigger);
-        binding.AxisDeadZone = 0.25f;
-        binding.AxisSensitivity = 3f;
-        binding.AxisGravity = 2f;
-        binding.AxisScale = -1f;
-        binding.AxisSnap = true;
+        var binding = Axis(InputControl.RightTrigger);
+        binding.AxisSettings = new InputAxisSettings { DeadZone = 0.25f, Sensitivity = 3f, Gravity = 2f, Scale = -1f, Snap = true };
 
         var map = InputMappingCompiler.Compile([Context("Gameplay", Map(throttle, binding))], Options);
 
@@ -67,6 +63,87 @@ public class CompilerTests
         var config = map.ActionConfigs.Single();
         Assert.That(config.MouseButton, Is.EqualTo(MouseButton.Right));
         Assert.That(config.Key, Is.EqualTo(KeyboardKeys.None));
+    }
+
+    [Test]
+    public void ButtonControls_OnlySetTheirOwnInput()
+    {
+        var fire = Action("Fire");
+        var key = Key(KeyboardKeys.F);
+        key.GamepadButton = GamepadButton.A; // left over from switching the control; ignored
+
+        var map = InputMappingCompiler.Compile([Context("Gameplay", Map(fire, key, Mouse(FlaxEngine.MouseButton.Left)))], Options);
+
+        Assert.That(map.ActionConfigs, Has.Length.EqualTo(2));
+        Assert.That(map.ActionConfigs[0].Key, Is.EqualTo(KeyboardKeys.F));
+        Assert.That(map.ActionConfigs[0].GamepadButton, Is.EqualTo(GamepadButton.None));
+        Assert.That(map.ActionConfigs[1].MouseButton, Is.EqualTo(FlaxEngine.MouseButton.Left));
+        Assert.That(map.ActionConfigs[1].Key, Is.EqualTo(KeyboardKeys.None));
+    }
+
+    [TestCase(InputControl.LeftStick, InputAxisType.GamepadLeftStickX, InputAxisType.GamepadLeftStickY)]
+    [TestCase(InputControl.RightStick, InputAxisType.GamepadRightStickX, InputAxisType.GamepadRightStickY)]
+    [TestCase(InputControl.DPad, InputAxisType.GamepadDPadX, InputAxisType.GamepadDPadY)]
+    [TestCase(InputControl.MouseDelta, InputAxisType.MouseX, InputAxisType.MouseY)]
+    public void TwoAxisControls_CompileToAnAxisPerComponent(InputControl control, InputAxisType x, InputAxisType y)
+    {
+        var look = Action("Look", InputActionType.Axis2D);
+
+        var map = InputMappingCompiler.Compile([Context("Gameplay", Map(look, Axis(control)))], Options);
+
+        Assert.That(map.AxisConfigs.Select(c => c.Axis), Is.EqualTo(new[] { x, y }));
+        Assert.That(map.Actions.Single().Bindings.Single().Inputs.Select(i => i.Component), Is.EqualTo(new[] { 0, 1 }));
+    }
+
+    [Test]
+    public void OneAxisOfATwoAxisControl_CompilesToThatAxisOnly()
+    {
+        var turn = Action("Turn", InputActionType.Axis1D);
+
+        var map = InputMappingCompiler.Compile([Context("Gameplay", Map(turn, Axis(InputControl.MouseDelta, InputControlAxes.Y)))], Options);
+
+        Assert.That(map.AxisConfigs.Single().Axis, Is.EqualTo(InputAxisType.MouseY));
+    }
+
+    [Test]
+    public void DirectionalKeys_CompileToAKeyPairPerAxis()
+    {
+        var move = Action("Move", InputActionType.Axis2D);
+
+        var map = InputMappingCompiler.Compile([Context("Gameplay", Map(move, DirectionalKeys(KeyboardKeys.W, KeyboardKeys.S, KeyboardKeys.A, KeyboardKeys.D)))], Options);
+
+        Assert.That(map.AxisConfigs, Has.Length.EqualTo(2));
+        Assert.That(map.AxisConfigs.Select(c => c.Axis), Has.All.EqualTo(InputAxisType.KeyboardOnly));
+        Assert.That((map.AxisConfigs[0].PositiveButton, map.AxisConfigs[0].NegativeButton), Is.EqualTo((KeyboardKeys.D, KeyboardKeys.A)));
+        Assert.That((map.AxisConfigs[1].PositiveButton, map.AxisConfigs[1].NegativeButton), Is.EqualTo((KeyboardKeys.W, KeyboardKeys.S)));
+    }
+
+    [Test]
+    public void GamepadButtonAxis_UsesTheGamepadButtonPair()
+    {
+        var zoom = Action("Zoom", InputActionType.Axis1D);
+        var binding = new InputMappingEntry
+        {
+            Control = InputControl.GamepadButtonAxis,
+            GamepadPositiveButton = GamepadButton.RightShoulder,
+            GamepadNegativeButton = GamepadButton.LeftShoulder,
+        };
+
+        var config = InputMappingCompiler.Compile([Context("Gameplay", Map(zoom, binding))], Options).AxisConfigs.Single();
+
+        Assert.That(config.Axis, Is.EqualTo(InputAxisType.KeyboardOnly));
+        Assert.That((config.GamepadPositiveButton, config.GamepadNegativeButton), Is.EqualTo((GamepadButton.RightShoulder, GamepadButton.LeftShoulder)));
+    }
+
+    [Test]
+    public void KeyboardAndMouseRows_AreSkippedForGamepadOnlyManagers()
+    {
+        var jump = Action("Jump");
+        var options = Options with { UseKeyboardAndMouse = false };
+
+        var map = InputMappingCompiler.Compile([Context("Gameplay", Map(jump, Key(KeyboardKeys.Spacebar), Mouse(FlaxEngine.MouseButton.Left), Button(GamepadButton.A)))], options);
+
+        Assert.That(map.ActionConfigs.Single().GamepadButton, Is.EqualTo(GamepadButton.A));
     }
 
     [Test]

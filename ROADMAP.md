@@ -27,7 +27,7 @@ The compiler now builds a runtime plan in which every binding has its own Flax v
 - [x] 🔴 **Digital actions kept only the last binding row.** Fixed: every row compiles to its own virtual input.
 - [x] 🔴 **Axis1D values were multiplied by the number of bindings.** Fixed: each binding reads its own input and applies its own modifiers. Bindings are combined by taking the highest absolute value per component, as in Unreal's default.
 - [x] 🔴 **Axis3D did not work.** Fixed: Z bindings compile and are read, and 3D modifiers are applied.
-- [x] 🔴 **Axis2D supported exactly two rows.** Fixed: `InputMappingEntry.Target` (Auto/X/Y/Z) selects the component a binding drives, so any number of rows can drive each axis. `Auto` keeps the old row-based layout, so existing assets still work. Also, non-axis (key/button) rows now contribute 1.0 to any action type.
+- [x] 🔴 **Axis2D supported exactly two rows.** Fixed: `InputMappingEntry.Target` (Auto/X/Y/Z) selects the component a binding drives, so any number of rows can drive each axis. (`Auto` was later removed; see "One input per mapping entry" in Milestone 3.) Also, non-axis (key/button) rows now contribute 1.0 to any action type.
 - [x] 🟠 **`AddInputContext` / `RemoveInputContext` stopped at the first skipped entry.** Fixed.
 - [x] 🟠 **Removing a context left its actions stuck.** Fixed: actions that aren't evaluated in a frame get a final `None` evaluation, which raises `Completed`/`Canceled`, and are dropped once idle.
 - [x] 🟠 **An action in two contexts advanced its state machine twice.** Fixed: an action's bindings from every context are merged, and the action is evaluated once per frame.
@@ -38,7 +38,7 @@ The compiler now builds a runtime plan in which every binding has its own Flax v
 - [x] 🔴 **`ModifierDeadZone` did nothing for Axis1D and Axis2D.** Fixed: it now supports 1D, plus 2D and 3D in `Radial` (default) or `Axial` mode, and remaps `[Lower, Upper]` to `[0, 1]`. It no longer logs a warning every frame.
   - ⚠️ Behaviour change: values above `UpperThreshold` now become 1.0 instead of being clamped to `UpperThreshold`.
 - [x] 🟠 **`InputModifier` threw `NotImplementedException` for any overload that wasn't overridden.** Fixed: an overload that isn't overridden forwards up a dimension (float → Float2 → Float3), and Float3 passes the value through unchanged.
-- [x] 🟠 **Radial processing of a stick was per-axis.** Fixed in Milestone 2: put the dead zone in the action's own `Modifiers`, which see the combined 2D value. A binding that reads both axes of a stick in one row would still be a nice addition.
+- [x] 🟠 **Radial processing of a stick was per-axis.** Fixed in Milestone 2: put the dead zone in the action's own `Modifiers`, which see the combined 2D value. Stick, D-pad and mouse-delta bindings now read both axes in one row (Milestone 3), so binding-level modifiers see the 2D value too.
 
 ### Bindings & dispatch
 
@@ -69,6 +69,8 @@ The compiler now builds a runtime plan in which every binding has its own Flax v
 
 ## Milestone 3 — Features
 
+- [x] 🟢 **One input per mapping entry.** Like Unreal, each action in an Input Mapping Context has an array of inputs, and each input has its own triggers and modifiers. An input picks its control from a Device ▸ Control menu (`InputControlEditor`) and only shows that control's fields. Sticks, the D-pad, mouse delta and directional keys (WASD) fill X and Y in one entry; one-value analog inputs use an explicit `Target` (the old `Auto` row-order targeting is gone). Mouse buttons can be bound. Old assets are upgraded on load (`LegacyInputBinding`): an entry holding a key and a gamepad button is split into one input per device, and `Auto` becomes the entry's index.
+  - ⚠️ Behaviour change: `InputActionEntry` is now `InputActionMapping`, and its `InputMapping` list is now `Inputs`. `UseAxis`/`AxisType` became `Control`/`Axes`, and the axis fields moved to `AxisSettings`.
 - [ ] 🟢 More triggers: `Released`, `Tap`, `Pulse`, `Combo`, and a `ChordBlocker` (so Shift+W doesn't also fire W); a one-shot option for `Hold` (README todo #2).
 - [ ] 🟢 More modifiers: `Negate`, `Swizzle` (YXZ…), `Smooth`, a response curve (exponential or a user curve), `FOV scaling`, and a proper radial `DeadZone` (README todo #2).
 - [ ] 🟢 Runtime key rebinding with saving/loading of player overrides (a "player mappable" flag on bindings).
@@ -96,5 +98,5 @@ The compiler now builds a runtime plan in which every binding has its own Flax v
 - [x] 🟢 **Unit tests.** Done: `Tests/FlaxAIM.Tests` (NUnit, `dotnet test`, no engine), modelled on FlaxACE's. The core moved into the engine-independent `InputProcessor`, and replaceable hooks for logging, the virtual input backend and the asset lookup let tests drive it against simulated devices. Engine tests in the examples project cover what needs the engine (see [docs/EngineTests.md](docs/EngineTests.md)).
   - ⚠️ Breaking change: `InputTrigger.UpdateState` takes an `InputProcessor` instead of an `InputManager`.
 - [x] 🟢 **Samples.** Done: `Examples/` is a separate Flax project (modelled on FlaxACE's) with a demo scene covering a character controller, a pause menu context that consumes keys, a chord, a hold, and a HUD of action states.
-- [ ] 🟢 **XML docs on the public API.** The core types are documented; triggers, modifiers and the data types (`InputMappingEntry`, `InputActionEntry`, `ProcessedInputActionValue`) still need a pass.
+- [ ] 🟢 **XML docs on the public API.** The core types are documented; triggers, modifiers and the data types (`InputActionMapping`, `InputMappingEntry`, `ProcessedInputActionValue`) still need a pass.
 - [x] 🟢 **Contexts built in code.** Done: `InputActionEntry.RuntimeAction` and `TriggerChord.RuntimeChordAction` accept actions that aren't assets (not serialized). Tests use them, and games can build contexts procedurally.

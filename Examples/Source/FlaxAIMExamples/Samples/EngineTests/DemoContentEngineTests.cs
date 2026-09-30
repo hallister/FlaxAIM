@@ -33,17 +33,20 @@ public class DemoContentEngineTests : EngineTestFixture
         var gameplay = LoadContext(Gameplay);
 
         Check.Equal(6, gameplay.Mappings.Count, "Gameplay actions");
-        Check.Equal(14, gameplay.Mappings.Sum(m => m.InputMapping.Count), "Gameplay bindings");
+        Check.Equal(12, gameplay.Mappings.Sum(m => m.Inputs.Count), "Gameplay bindings");
+
+        var move = gameplay.Mappings.Single(m => m.InputAction.Instance?.Name == "Move");
+        Check.That(move.Inputs.Select(i => i.Control).SequenceEqual([InputControl.DirectionalKeys, InputControl.LeftStick]), "Move is WASD plus the left stick");
 
         var slide = gameplay.Mappings.Single(m => m.InputAction.Instance?.Name == "Slide");
-        var chord = slide.InputMapping[0].Triggers.OfType<TriggerChord>().Single();
+        var chord = slide.Inputs[0].Triggers.OfType<TriggerChord>().Single();
         Check.Equal("Sprint", chord.ChordAction.Instance?.Name, "Slide's chord action");
 
         var spin = gameplay.Mappings.Single(m => m.InputAction.Instance?.Name == "Spin");
-        Check.Near(0.6f, spin.InputMapping[0].Triggers.OfType<TriggerHold>().Single().HoldTimeThreshold, "Spin hold time");
+        Check.Near(0.6f, spin.Inputs[0].Triggers.OfType<TriggerHold>().Single().HoldTimeThreshold, "Spin hold time");
 
-        var move = ActionNamed(gameplay, "Move");
-        Check.That(move.Modifiers.Count == 1 && move.Modifiers[0] is Modifiers.ModifierDeadZone, "Move's radial dead zone");
+        var moveAction = ActionNamed(gameplay, "Move");
+        Check.That(moveAction.Modifiers.Count == 1 && moveAction.Modifiers[0] is Modifiers.ModifierDeadZone, "Move's radial dead zone");
     }
 
     [EngineTest]
@@ -75,5 +78,22 @@ public class DemoContentEngineTests : EngineTestFixture
         Check.Equal(EnhancedInputActionState.Triggered, manager.GetActionState(confirm), "Menu confirm");
         Check.Equal(EnhancedInputActionState.None, manager.GetActionState(jump), "Jump while paused");
         Check.Equal(EnhancedInputActionState.None, manager.GetActionState(move), "Move while paused");
+    }
+
+    [EngineTest]
+    public void DirectionalKeysDriveBothAxes()
+    {
+        var devices = UseScriptedInput();
+        var gameplay = LoadContext(Gameplay);
+        var move = ActionNamed(gameplay, "Move");
+        var manager = CreateManager();
+        manager.AddInputContext(gameplay);
+
+        devices.Press(KeyboardKeys.W, KeyboardKeys.D);
+        Tick(manager);
+        Tick(manager);
+
+        var value = manager.GetActionValue(move).Axis2D;
+        Check.That(value.X > 0f && value.Y > 0f, $"W+D moves up and right (got {value})");
     }
 }

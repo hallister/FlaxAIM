@@ -138,25 +138,27 @@ public abstract class EngineTestFixture
 
     protected static InputMappingEntry Key(KeyboardKeys key, params InputTrigger[] triggers) => new()
     {
+        Control = InputControl.Key,
         Key = key,
         Triggers = [..triggers],
     };
 
     protected static InputMappingEntry Button(GamepadButton button) => new()
     {
+        Control = InputControl.GamepadButton,
         GamepadButton = button,
     };
 
     /// <summary>
     /// Maps an action asset (resolved through the asset, like a context loaded from content).
     /// </summary>
-    protected static InputActionEntry Map(JsonAssetReference<InputAction> action, params InputMappingEntry[] bindings) => new()
+    protected static InputActionMapping Map(JsonAssetReference<InputAction> action, params InputMappingEntry[] inputs) => new()
     {
         InputAction = action,
-        InputMapping = [..bindings],
+        Inputs = [..inputs],
     };
 
-    protected static InputMappingContext Context(string name, params InputActionEntry[] mappings) => new()
+    protected static InputMappingContext Context(string name, params InputActionMapping[] mappings) => new()
     {
         ContextName = name,
         Mappings = [..mappings],

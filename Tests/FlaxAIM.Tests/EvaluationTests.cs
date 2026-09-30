@@ -57,7 +57,7 @@ public class EvaluationTests : InputTestBase
     public void Axis1D_TakesTheStrongestBindingInsteadOfSumming()
     {
         var throttle = Action("Throttle", InputActionType.Axis1D);
-        Input.AddInputContext(Context("Gameplay", Map(throttle, Keys(KeyboardKeys.W, KeyboardKeys.S), Axis(InputAxisType.GamepadRightTrigger))));
+        Input.AddInputContext(Context("Gameplay", Map(throttle, Keys(KeyboardKeys.W, KeyboardKeys.S), Axis(InputControl.RightTrigger))));
 
         Devices.Press(KeyboardKeys.W);
         Devices.SetAxis(InputAxisType.GamepadRightTrigger, 0.5f);
@@ -70,18 +70,16 @@ public class EvaluationTests : InputTestBase
     }
 
     [Test]
-    public void Axis2D_KeyboardAndStickCanBothDriveEachAxis()
+    public void Axis2D_DirectionalKeysAndStickEachFillBothAxesInOneRow()
     {
         var move = Action("Move", InputActionType.Axis2D);
         Input.AddInputContext(Context("Gameplay", Map(move,
-            Keys(KeyboardKeys.D, KeyboardKeys.A, InputAxisTarget.X),
-            Keys(KeyboardKeys.W, KeyboardKeys.S, InputAxisTarget.Y),
-            Axis(InputAxisType.GamepadLeftStickX, InputAxisTarget.X),
-            Axis(InputAxisType.GamepadLeftStickY, InputAxisTarget.Y))));
+            DirectionalKeys(KeyboardKeys.W, KeyboardKeys.S, KeyboardKeys.A, KeyboardKeys.D),
+            Axis(InputControl.LeftStick))));
 
-        Devices.Press(KeyboardKeys.W);
+        Devices.Press(KeyboardKeys.W, KeyboardKeys.A);
         Tick();
-        Assert.That(Input.GetActionValue(move).Axis2D, Is.EqualTo(new Float2(0f, 1f)));
+        Assert.That(Input.GetActionValue(move).Axis2D, Is.EqualTo(new Float2(-1f, 1f)));
 
         Devices.ReleaseAll();
         Devices.SetAxis(InputAxisType.GamepadLeftStickX, 0.3f);
@@ -91,31 +89,96 @@ public class EvaluationTests : InputTestBase
     }
 
     [Test]
-    public void AutoTarget_UsesTheRowOrderForExistingAssets()
-    {
-        var move = Action("Move", InputActionType.Axis2D);
-        Input.AddInputContext(Context("Gameplay", Map(move, Keys(KeyboardKeys.D, KeyboardKeys.A), Keys(KeyboardKeys.W, KeyboardKeys.S))));
-
-        Devices.Press(KeyboardKeys.D, KeyboardKeys.S);
-        Tick();
-
-        Assert.That(Input.GetActionValue(move).Axis2D, Is.EqualTo(new Float2(1f, -1f)));
-    }
-
-    [Test]
-    public void AutoTarget_PastTheLastComponent_WarnsAndUsesX()
+    public void Axis2D_OneAxisBindingsDriveTheirTarget()
     {
         var move = Action("Move", InputActionType.Axis2D);
         Input.AddInputContext(Context("Gameplay", Map(move,
-            Keys(KeyboardKeys.D, KeyboardKeys.A),
-            Keys(KeyboardKeys.W, KeyboardKeys.S),
-            Keys(KeyboardKeys.E, KeyboardKeys.Q))));
+            Keys(KeyboardKeys.D, KeyboardKeys.A, InputAxisTarget.X),
+            Keys(KeyboardKeys.W, KeyboardKeys.S, InputAxisTarget.Y),
+            Axis(InputControl.RightStick, InputControlAxes.Y, InputAxisTarget.X))));
+
+        Devices.Press(KeyboardKeys.S);
+        Tick();
+        Assert.That(Input.GetActionValue(move).Axis2D, Is.EqualTo(new Float2(0f, -1f)));
+
+        // The right stick's Y axis, read into X
+        Devices.ReleaseAll();
+        Devices.SetAxis(InputAxisType.GamepadRightStickY, 0.5f);
+        Tick();
+        Assert.That(Input.GetActionValue(move).Axis2D, Is.EqualTo(new Float2(0.5f, 0f)));
+    }
+
+    [Test]
+    public void Target_PastTheLastComponent_WarnsAndUsesX()
+    {
+        var move = Action("Move", InputActionType.Axis2D);
+        Input.AddInputContext(Context("Gameplay", Map(move, Keys(KeyboardKeys.E, KeyboardKeys.Q, InputAxisTarget.Z))));
 
         Devices.Press(KeyboardKeys.E);
         Tick();
 
         Assert.That(Input.GetActionValue(move).Axis2D, Is.EqualTo(new Float2(1f, 0f)));
-        Assert.That(TestEnvironment.Warnings.Any(w => w.Contains("row 2")), Is.True);
+        Assert.That(TestEnvironment.Warnings.Any(w => w.Contains("row 0") && w.Contains("target Z")), Is.True);
+    }
+
+    [Test]
+    public void TwoAxisBinding_OnAOneAxisAction_WarnsAndUsesX()
+    {
+        var steer = Action("Steer", InputActionType.Axis1D);
+        Input.AddInputContext(Context("Gameplay", Map(steer, Axis(InputControl.LeftStick))));
+
+        Devices.SetAxis(InputAxisType.GamepadLeftStickX, -0.6f);
+        Devices.SetAxis(InputAxisType.GamepadLeftStickY, 0.9f);
+        Tick();
+
+        Assert.That(Input.GetActionValue(steer).Axis1D, Is.EqualTo(-0.6f));
+        Assert.That(TestEnvironment.Warnings.Any(w => w.Contains("reads two axes")), Is.True);
+    }
+
+    [Test]
+    public void MouseButtons_CanBeBound()
+    {
+        var fire = Action("Fire");
+        Input.AddInputContext(Context("Gameplay", Map(fire, Mouse(FlaxEngine.MouseButton.Left))));
+
+        Devices.Press(FlaxEngine.MouseButton.Left);
+        Tick();
+
+        Assert.That(Input.GetActionState(fire), Is.EqualTo(S.Triggered));
+    }
+
+    [Test]
+    public void EachDeviceRowOfAnAction_HasItsOwnTriggers()
+    {
+        var interact = Action("Interact");
+        Input.AddInputContext(Context("Gameplay", Map(interact,
+            Key(KeyboardKeys.E, new TriggerHold { HoldTimeThreshold = 0.5f }),
+            Button(GamepadButton.X))));
+
+        Devices.Press(GamepadButton.X);
+        Tick();
+        Assert.That(Input.GetActionState(interact), Is.EqualTo(S.Triggered), "The button has no hold");
+
+        Devices.ReleaseAll();
+        Tick();
+        Devices.Press(KeyboardKeys.E);
+        Tick();
+        Assert.That(Input.GetActionState(interact), Is.EqualTo(S.Ongoing), "The key has to be held");
+    }
+
+    [Test]
+    public void BindingModifiers_SeeATwoAxisControlsVector()
+    {
+        var move = Action("Move", InputActionType.Axis2D);
+        Input.AddInputContext(Context("Gameplay", Map(move,
+            Axis(InputControl.LeftStick).With(new ModifierDeadZone { LowerThreshold = 0.2f, UpperThreshold = 1f }))));
+
+        // Each axis alone is inside the dead zone; the stick's length isn't
+        Devices.SetAxis(InputAxisType.GamepadLeftStickX, 0.15f);
+        Devices.SetAxis(InputAxisType.GamepadLeftStickY, 0.15f);
+        Tick();
+
+        Assert.That(Input.GetActionValue(move).Axis2D.X, Is.GreaterThan(0f));
     }
 
     [Test]
@@ -189,7 +252,7 @@ public class EvaluationTests : InputTestBase
         var throttle = Action("Throttle", InputActionType.Axis1D);
         Input.AddInputContext(Context("Gameplay", Map(throttle,
             Keys(KeyboardKeys.W, KeyboardKeys.S).With(new ModifierScale { ScaleX = 0.5f }),
-            Axis(InputAxisType.GamepadRightTrigger))));
+            Axis(InputControl.RightTrigger))));
 
         Devices.Press(KeyboardKeys.W);
         Tick();
@@ -207,8 +270,8 @@ public class EvaluationTests : InputTestBase
         var move = Action("Move", InputActionType.Axis2D);
         move.Modifiers = [new ModifierDeadZone { LowerThreshold = 0.2f, UpperThreshold = 1f }];
         Input.AddInputContext(Context("Gameplay", Map(move,
-            Axis(InputAxisType.GamepadLeftStickX, InputAxisTarget.X),
-            Axis(InputAxisType.GamepadLeftStickY, InputAxisTarget.Y))));
+            Axis(InputControl.LeftStick, InputControlAxes.X, InputAxisTarget.X),
+            Axis(InputControl.LeftStick, InputControlAxes.Y, InputAxisTarget.Y))));
 
         // Each axis alone is inside the dead zone; the stick's length isn't
         Devices.SetAxis(InputAxisType.GamepadLeftStickX, 0.15f);
@@ -258,7 +321,7 @@ public class EvaluationTests : InputTestBase
     public void DefaultActuationThreshold_AppliesToBindingsWithoutTriggers()
     {
         var accelerate = Action("Accelerate", InputActionType.Axis1D);
-        Input.AddInputContext(Context("Gameplay", Map(accelerate, Axis(InputAxisType.GamepadRightTrigger))));
+        Input.AddInputContext(Context("Gameplay", Map(accelerate, Axis(InputControl.RightTrigger))));
 
         Devices.SetAxis(InputAxisType.GamepadRightTrigger, 0.05f);
         Tick();
@@ -277,7 +340,7 @@ public class EvaluationTests : InputTestBase
     public void PreviousFrameMagnitude_IsLastFramesValue()
     {
         var throttle = Action("Throttle", InputActionType.Axis1D);
-        Input.AddInputContext(Context("Gameplay", Map(throttle, Axis(InputAxisType.GamepadRightTrigger))));
+        Input.AddInputContext(Context("Gameplay", Map(throttle, Axis(InputControl.RightTrigger))));
 
         Devices.SetAxis(InputAxisType.GamepadRightTrigger, 0.4f);
         Tick();

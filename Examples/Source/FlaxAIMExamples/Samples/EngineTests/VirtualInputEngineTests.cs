@@ -73,7 +73,7 @@ public class VirtualInputEngineTests : EngineTestFixture
         var manager = CreateManager(configure: m => m.Gamepad = InputGamepadIndex.Gamepad1);
         manager.AddInputContext(Context("Gameplay",
             Map(ActionAsset("Jump"), Button(GamepadButton.A)),
-            Map(throttle, new InputMappingEntry { UseAxis = true, AxisType = InputAxisType.GamepadRightTrigger, AxisDeadZone = 0.3f, AxisScale = 2f })));
+            Map(throttle, new InputMappingEntry { Control = InputControl.RightTrigger, AxisSettings = new InputAxisSettings { DeadZone = 0.3f, Scale = 2f } })));
 
         var action = Input.ActionMappings.Single(c => IsPluginMapping(c.Name));
         var axis = Input.AxisMappings.Single(c => IsPluginMapping(c.Name));

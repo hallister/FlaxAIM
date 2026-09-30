@@ -21,7 +21,7 @@ public class MyPlugin : GamePlugin
             HomepageUrl = null,
             RepositoryUrl = "https://github.com/hallister/FlaxAIM",
             Description = "An input system modeled after the Unreal Enhanced Input system.",
-            Version = new Version(1, 0),
+            Version = new Version(0, 2),
             IsAlpha = true,
             IsBeta = false,
         };

@@ -2,6 +2,10 @@
 
 This project is an input manager for Flax Engine modeled after Unreal's EnhancedInputSystem.
 
+### AI Disclaimer
+
+I leverage AI assistive technologies for coding and documentation due to a physical medical condition. All logic, architecture, and code execution are verified by me before submission.
+
 # Getting Started
 
 1. Clone this repo into your project plugins folder.
@@ -33,6 +37,16 @@ public override void OnDestroy() => _input?.UnbindAll(this);
 
 The [examples project](#examples) has a complete, playable version of this.
 
+## Versions and upgrades
+
+`VERSION` is the authoritative release number. During `0.x`,
+breaking changes increment the minor version; compatible additions and fixes increment the patch version.
+Pin a published Git tag when using the plugin in a game. See [release instructions](docs/Releasing.md) and the
+[changelog and v0.2 migration guide](CHANGELOG.md) before upgrading.
+
+Upgrading from v0.1 to v0.2 requires a one-time rebuild of existing IMC bindings in the editor. Old assets are not
+automatically converted; contexts built in C# require the API changes described in the migration guide.
+
 ### Basics
 
 FlaxAIM publishes its bindings to Flax's virtual input tables at runtime, next to the project's own input settings,
@@ -44,8 +58,21 @@ An Input Action is an action tied to an input, like Jump, Move, Look, etc.
 
 #### Input Mapping Context
 
-Assign keys to actions. Contexts are added to an `InputManager` with a priority; higher-priority contexts consume the
-keys they use.
+A list of Input Actions, each with an array of the inputs that drive it (like Unreal's). Every input has its own
+modifiers and triggers, so the keyboard and gamepad bindings of one action can behave differently. Pick each input from
+the **Device ▸ Control** menu:
+
+| Device   | Controls                                                                  |
+|----------|---------------------------------------------------------------------------|
+| Keyboard | Key, Key Axis (positive/negative keys), Directional Keys (up/down/left/right) |
+| Mouse    | Button, Delta, Wheel                                                      |
+| Gamepad  | Button, Button Axis, Left Stick, Right Stick, D-Pad, Left Trigger, Right Trigger |
+
+Directional Keys, the sticks, the D-pad and mouse Delta fill an `Axis2D` action's X and Y from one input. Set **Axes** to
+read only X or Y from them. An analog input that produces one value drives the action component chosen by **Target**
+(Digital and Axis1D actions ignore it).
+
+Contexts are added to an `InputManager` with a priority; higher-priority contexts consume the keys they use.
 
 ## Examples
 
@@ -74,7 +101,7 @@ Open `Examples/FlaxAIMExamples.flaxproj` in the Flax editor and press Play.
 
 - `Source/FlaxAIM/` — the runtime: `InputProcessor` (the engine-independent core), the `InputManager` script that
   drives it, actions, contexts, triggers and modifiers.
-- `Source/FlaxAIMEditor/` — editor integration.
+- `Source/FlaxAIMEditor/` — editor integration: the Device ▸ Control picker for mapping inputs.
 - `Tests/FlaxAIM.Tests/` — unit tests (see [Testing](#testing)).
 - `Examples/` — the examples project (see [Examples](#examples)).
 

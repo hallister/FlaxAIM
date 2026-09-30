@@ -1,0 +1,13 @@
+{
+	"ID": "b4a2f38b42389e581040a5b2eb130dac",
+	"TypeName": "FlaxAIM.InputAction",
+	"EngineBuild": 6915,
+	"Data": {
+	"ID": "488b933a-ad72-4d6e-a9a2-0db0abb1e428",
+	"Name": "DefaultInputAction",
+	"ActionType": 0,
+	"ConsumeInput": true,
+	"Modifiers": [],
+	"Triggers": []
+}
+}

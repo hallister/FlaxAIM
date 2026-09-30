@@ -163,21 +163,20 @@ public partial class InputProcessor
     }
 
     /// <summary>
-    /// Reads one binding's raw input, places it in its target component and applies its modifiers.
+    /// Reads one binding's raw inputs, places each in its target component and applies the binding's modifiers.
     /// </summary>
     private static Float3 ReadBinding(CompiledBinding binding, InputActionType actionType)
     {
         var backend = VirtualInputRegistry.Backend;
-        var raw = binding.IsAxis
-            ? backend.GetAxis(binding.VirtualName)
-            : backend.GetAction(binding.VirtualName) ? 1f : 0f;
+        var value = Float3.Zero;
 
-        var value = binding.Component switch
+        foreach (var input in binding.Inputs)
         {
-            1 => new Float3(0f, raw, 0f),
-            2 => new Float3(0f, 0f, raw),
-            _ => new Float3(raw, 0f, 0f),
-        };
+            var raw = input.IsAxis
+                ? backend.GetAxis(input.VirtualName)
+                : backend.GetAction(input.VirtualName) ? 1f : 0f;
+            value[input.Component] = raw;
+        }
 
         return ApplyModifiers(binding.Modifiers, value, actionType);
     }

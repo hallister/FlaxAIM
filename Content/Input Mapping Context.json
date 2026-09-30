@@ -1,0 +1,95 @@
+{
+	"ID": "6c4bcd554a2e5f01f816be8bf1794d5c",
+	"TypeName": "FlaxAIM.InputMappingContext",
+	"EngineBuild": 6915,
+	"Data": {
+	"ContextName": "Demo",
+	"Mappings": [
+		{
+			"InputAction": "5db944ca4c35172b74ff6abf015643ca",
+			"Inputs": [
+				{
+					"Control": 0,
+					"Key": 75,
+					"MouseButton": 0,
+					"GamepadButton": 0,
+					"KeyPositive": 0,
+					"KeyNegative": 0,
+					"KeyUp": 0,
+					"KeyDown": 0,
+					"KeyLeft": 0,
+					"KeyRight": 0,
+					"GamepadPositiveButton": 0,
+					"GamepadNegativeButton": 0,
+					"Axes": 0,
+					"Target": 0,
+					"AxisSettings": {
+						"DeadZone": 0.0,
+						"Sensitivity": 0.0,
+						"Gravity": 0.0,
+						"Scale": 0.0,
+						"Snap": false
+					},
+					"Modifiers": [],
+					"Triggers": []
+				}
+			]
+		},
+		{
+			"InputAction": "b4a2f38b42389e581040a5b2eb130dac",
+			"Inputs": [
+				{
+					"Control": 10,
+					"Key": 0,
+					"MouseButton": 0,
+					"GamepadButton": 0,
+					"KeyPositive": 0,
+					"KeyNegative": 0,
+					"KeyUp": 0,
+					"KeyDown": 0,
+					"KeyLeft": 0,
+					"KeyRight": 0,
+					"GamepadPositiveButton": 0,
+					"GamepadNegativeButton": 0,
+					"Axes": 0,
+					"Target": 0,
+					"AxisSettings": {
+						"DeadZone": 0.0,
+						"Sensitivity": 0.0,
+						"Gravity": 0.0,
+						"Scale": 0.0,
+						"Snap": false
+					},
+					"Modifiers": [],
+					"Triggers": []
+				},
+				{
+					"Control": 20,
+					"Key": 0,
+					"MouseButton": 0,
+					"GamepadButton": 0,
+					"KeyPositive": 0,
+					"KeyNegative": 0,
+					"KeyUp": 0,
+					"KeyDown": 0,
+					"KeyLeft": 0,
+					"KeyRight": 0,
+					"GamepadPositiveButton": 0,
+					"GamepadNegativeButton": 0,
+					"Axes": 0,
+					"Target": 0,
+					"AxisSettings": {
+						"DeadZone": 0.0,
+						"Sensitivity": 0.0,
+						"Gravity": 0.0,
+						"Scale": 0.0,
+						"Snap": false
+					},
+					"Modifiers": [],
+					"Triggers": []
+				}
+			]
+		}
+	]
+}
+}
