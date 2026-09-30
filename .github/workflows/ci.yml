@@ -1,0 +1,103 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    name: Unit and engine tests (Flax master)
+    runs-on: windows-2022
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      DOTNET_NOLOGO: 'true'
+      DOTNET_CLI_TELEMETRY_OPTOUT: 'true'
+      FLAX_ENGINE_PATH: ${{ runner.temp }}/FlaxEngine
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Install .NET for Flax.Build and tests
+        uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: Check release metadata
+        run: ./Scripts/Release.ps1 -Mode Check
+
+      - name: Select Flax master build
+        id: flax
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: ./.github/scripts/Resolve-FlaxMaster.ps1
+
+      - name: Cache selected engine artifact
+        id: cache
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          path: ${{ env.FLAX_ENGINE_PATH }}
+          key: flax-windows-master-${{ steps.flax.outputs.artifact-id }}
+
+      - name: Download official master editor artifact
+        if: steps.cache.outputs.cache-hit != 'true'
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          repository: FlaxEngine/FlaxEngine
+          run-id: ${{ steps.flax.outputs.run-id }}
+          artifact-ids: ${{ steps.flax.outputs.artifact-id }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/flax-artifact
+
+      - name: Extract editor package
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          Expand-Archive -LiteralPath "$env:RUNNER_TEMP/flax-artifact/Editor.zip" -DestinationPath $env:FLAX_ENGINE_PATH
+
+      - name: Verify engine installation
+        id: engine
+        run: |
+          foreach ($file in @('Flax.flaxproj', 'Binaries/Tools/Flax.Build.exe', 'Binaries/Editor/Win64/Development/FlaxEditor.exe', 'Binaries/Editor/Win64/Development/FlaxEngine.CSharp.dll')) {
+            if (!(Test-Path -LiteralPath (Join-Path $env:FLAX_ENGINE_PATH $file))) {
+              throw "Missing Flax master package file: $file"
+            }
+          }
+
+      - name: Restore unit test dependencies
+        run: dotnet restore Tests/FlaxAIM.Tests/FlaxAIM.Tests.csproj
+
+      - name: Build plugin and run unit tests
+        run: dotnet test Tests/FlaxAIM.Tests/FlaxAIM.Tests.csproj --no-restore --logger 'trx;LogFileName=unit-tests.trx' --results-directory TestResults/Unit
+
+      - name: Build examples and run headless engine tests
+        if: ${{ !cancelled() && steps.engine.outcome == 'success' }}
+        run: ./Scripts/Test-Engine.ps1
+
+      - name: Upload test results and engine logs
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: test-results-${{ github.run_attempt }}
+          path: |
+            TestResults/
+            Examples/Logs/
+          if-no-files-found: warn
+          retention-days: 14

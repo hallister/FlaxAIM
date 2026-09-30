@@ -1,10 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <!--
-    Unit tests for FlaxAIM's core logic, run with plain `dotnet test` (no engine needed).
+    Unit tests for FlaxAIM's core logic, run with plain `dotnet test` (no running editor needed).
     Building this project first builds the FlaxAIM editor target with Flax.Build, then tests the resulting
     FlaxAIM.CSharp.dll. Pass -p:SkipFlaxBuild=true to test the existing build instead.
-    Set FLAX_ENGINE_PATH (or -p:FlaxEnginePath=...) if Flax isn't installed in the default location.
+    A Flax master installation is required. Set FLAX_ENGINE_PATH (or -p:FlaxEnginePath=...) if it isn't in the default location.
   -->
 
   <PropertyGroup>

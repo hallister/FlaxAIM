@@ -18,6 +18,10 @@ at runtime, so they need no content except the test scene (and the demo assets f
 
 ## Running
 
+**Headless / CI:** with `FLAX_ENGINE_PATH` pointing to a master build, run `./Scripts/Test-Engine.ps1` from
+PowerShell. It builds the examples, runs without a window or graphics device, checks the test summary, and saves
+logs in `TestResults/Engine`. This is also used by [GitHub Actions](CI.md).
+
 **In the editor:** open `Examples/FlaxAIMExamples.flaxproj`, then `Content/Tests/EngineTests.scene`, and press Play.
 Results are shown on screen and in the Output Log (`[EngineTests] PASS/FAIL/SKIP ...`). F6 runs them again. Set
 **Filter** on the `EngineTestRunner` script to run only matching tests (e.g. `Asset`).
