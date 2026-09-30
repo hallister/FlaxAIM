@@ -8,6 +8,9 @@ I leverage AI assistive technologies for coding and documentation due to a physi
 
 # Getting Started
 
+**Requires Flax's current master build.** The interface/abstract-class editor fixes this plugin needs are not
+in a numbered release yet; use the Launcher's master branch (daily) build until the next major Flax release.
+
 1. Clone this repo into your project plugins folder.
 1. Create a new InputAction via New -> Adaptive Input -> Input Action.
 1. Set the name to anything (Move).
@@ -88,6 +91,9 @@ FlaxAIM don't need it. It contains:
 Open `Examples/FlaxAIMExamples.flaxproj` in the Flax editor and press Play.
 
 ## Testing
+
+GitHub Actions runs unit tests and headless engine tests against the latest successful Flax master editor build.
+See [CI setup and local commands](docs/CI.md).
 
 - **Unit tests** in `Tests/FlaxAIM.Tests` run without the engine (`dotnet test Tests/FlaxAIM.Tests`, which needs a
   Flax installation or `FLAX_ENGINE_PATH`). They drive an `InputProcessor` against simulated devices and cover the
