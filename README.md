@@ -81,8 +81,9 @@ Contexts are added to an `InputManager` with a priority; higher-priority context
 
 `InputOverrides` holds a player's changes without touching the assets. A binding is named by its context, its action
 and its row in that action's inputs; a replacement swaps only the control it reads, keeping the asset's modifiers and
-triggers. A scale multiplies what an action's bindings on one device read, per component, so mouse and gamepad
-sensitivity stay separate.
+triggers. A row past the asset's adds a binding instead, used whole (so copy the triggers and target of the asset's
+binding it stands beside): a gamepad button for an action the asset only binds to a key. A scale multiplies what an
+action's bindings on one device read, per component, so mouse and gamepad sensitivity stay separate.
 
 ```csharp
 var overrides = new InputOverrides();
