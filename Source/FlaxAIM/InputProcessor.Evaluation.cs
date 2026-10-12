@@ -134,6 +134,7 @@ public partial class InputProcessor
         }
 
         combined = ApplyModifiers(compiledAction.Modifiers, combined, action.ActionType);
+        if (compiledAction.Scale != Float3.One) combined *= compiledAction.Scale;
 
         var magnitude = action.ActionType switch
         {

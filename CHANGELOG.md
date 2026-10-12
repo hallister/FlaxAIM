@@ -3,6 +3,15 @@
 Development releases use tags such as `v0.1` and `v0.2`. During `0.x`, incompatible changes increment
 the minor version; compatible additions and fixes use a patch version (for example `v0.2.1`). See [Releasing](docs/Releasing.md).
 
+## [Unreleased]
+
+### Added
+
+- `InputOverrides` for player settings: replace the control a single binding reads (rebinding) without editing the
+  IMC asset, and scale an action's final value per component (sensitivity, invert Y). Set it on
+  `InputProcessor.Overrides` or `InputManager.Overrides`; processors recompile when it changes, and several can share one.
+- `InputCapture.GamepadButtonDown` for rebinding screens waiting for a gamepad button.
+
 ## [0.2] - 2026-09-30
 
 ### Breaking changes
