@@ -33,6 +33,9 @@ internal sealed class CompiledBinding
 
     /// <summary> This manager's own trigger instances, cloned from the asset's templates. </summary>
     public InputTrigger[] Triggers;
+
+    /// <summary> The player's scale on this binding's device (<see cref="InputOverrides.ScaleOf"/>), after its modifiers. </summary>
+    public Float3 Scale = Float3.One;
 }
 
 /// <summary>
@@ -52,6 +55,7 @@ internal sealed class CompiledAction
 
     /// <summary> Action-level triggers (cloned), evaluated against the combined value. </summary>
     public InputTrigger[] Triggers = [];
+
 
     /// <summary> Actions that must be evaluated before this one (chords). </summary>
     public readonly List<Guid> Dependencies = [];
@@ -78,6 +82,9 @@ internal struct CompileOptions
 
     public InputGamepadIndex Gamepad;
     public bool UseKeyboardAndMouse;
+
+    /// <summary> The player's changes to the bindings, or null. </summary>
+    public InputOverrides Overrides;
 }
 
 public static class InputMappingCompiler
@@ -103,6 +110,7 @@ public static class InputMappingCompiler
         var consumedByContext = new HashSet<int>();
         var bindingInputs = new List<int>();
         var placements = new List<Placement>(2);
+        var rows = new List<(int Row, InputMappingEntry Entry)>();
 
         foreach (var context in contextsByPriority)
         {
@@ -124,12 +132,22 @@ public static class InputMappingCompiler
                     map.Actions.Add(compiledAction);
                 }
 
-                if (mapping.Inputs == null) continue;
-
-                for (var row = 0; row < mapping.Inputs.Count; row++)
+                rows.Clear();
+                if (mapping.Inputs != null)
                 {
-                    var entry = mapping.Inputs[row];
+                    for (var row = 0; row < mapping.Inputs.Count; row++)
+                    {
+                        var assetEntry = mapping.Inputs[row];
+                        if (options.Overrides != null
+                            && options.Overrides.TryGetBinding(new InputBindingKey(context.ContextName, actionId, row), out var controls))
+                            assetEntry = InputOverrides.Apply(assetEntry, controls);
+                        rows.Add((row, assetEntry));
+                    }
+                }
+                options.Overrides?.AddRowsBeyond(context.ContextName, actionId, mapping.Inputs?.Count ?? 0, rows);
 
+                foreach (var (row, entry) in rows)
+                {
                     // Players that only use a gamepad skip keyboard and mouse bindings entirely
                     if (!options.UseKeyboardAndMouse && entry.Control.Device() != InputDevice.Gamepad) continue;
 
@@ -164,6 +182,7 @@ public static class InputMappingCompiler
                         Inputs = inputs,
                         Modifiers = CollectModifiers(entry.Modifiers),
                         Triggers = CloneTriggers(entry.Triggers, owner),
+                        Scale = options.Overrides?.ScaleOf(new InputScaleKey(actionId, entry.Control.Device())) ?? Float3.One,
                     };
                     AddChordDependencies(compiledAction, binding.Triggers);
                     compiledAction.Bindings.Add(binding);

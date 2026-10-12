@@ -77,6 +77,27 @@ read only X or Y from them. An analog input that produces one value drives the a
 
 Contexts are added to an `InputManager` with a priority; higher-priority contexts consume the keys they use.
 
+#### Player overrides (rebinding and sensitivity)
+
+`InputOverrides` holds a player's changes without touching the assets. A binding is named by its context, its action
+and its row in that action's inputs; a replacement swaps only the control it reads, keeping the asset's modifiers and
+triggers. A scale multiplies what an action's bindings on one device read, per component, so mouse and gamepad
+sensitivity stay separate.
+
+```csharp
+var overrides = new InputOverrides();
+_input.Overrides = overrides;
+
+// Jump's first input in the OnFoot context now reads J
+overrides.SetBinding(new InputBindingKey("OnFoot", jumpAssetId, 0),
+    new InputMappingEntry { Control = InputControl.Key, Key = KeyboardKeys.J });
+
+// Twice the mouse look speed, with Y inverted
+overrides.SetScale(new InputScaleKey(lookAssetId, InputDevice.Mouse), new Float3(2f, -2f, 1f));
+```
+
+Saving the overrides is the game's job: `Bindings` and `Scales` list them, and `Load` restores them in one change.
+
 ## Examples
 
 `Examples/` is a separate Flax project (`Examples/FlaxAIMExamples.flaxproj`) that references the plugin. Games using

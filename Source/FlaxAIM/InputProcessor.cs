@@ -30,6 +30,7 @@ public partial class InputProcessor
     private CompiledInputMap _compiled = CompiledInputMap.Empty;
     private InputGamepadIndex _gamepad = InputGamepadIndex.All;
     private bool _useKeyboardAndMouse = true;
+    private InputOverrides _overrides;
 
     // Context changes made from callbacks during Update are compiled once the frame's evaluation has finished.
     private bool _isUpdating;
@@ -64,6 +65,23 @@ public partial class InputProcessor
         {
             if (_useKeyboardAndMouse == value) return;
             _useKeyboardAndMouse = value;
+            RebuildMappings();
+        }
+    }
+
+    /// <summary>
+    /// The player's changes to the bindings (rebound keys, sensitivity), or null for the assets as they are. The
+    /// processor recompiles when it's set and whenever it changes.
+    /// </summary>
+    public InputOverrides Overrides
+    {
+        get => _overrides;
+        set
+        {
+            if (_overrides == value) return;
+            if (_overrides != null) _overrides.Changed -= RebuildMappings;
+            _overrides = value;
+            if (_overrides != null) _overrides.Changed += RebuildMappings;
             RebuildMappings();
         }
     }
@@ -176,6 +194,7 @@ public partial class InputProcessor
             ManagerId = _id,
             Gamepad = _gamepad,
             UseKeyboardAndMouse = _useKeyboardAndMouse,
+            Overrides = _overrides,
         };
 
         _compiled = InputMappingCompiler.Compile(ordered.ConvertAll(e => e.Context), options);

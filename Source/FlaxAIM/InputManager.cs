@@ -27,6 +27,13 @@ public class InputManager : Script
     /// </summary>
     public InputProcessor Processor { get; } = new();
 
+    /// <inheritdoc cref="InputProcessor.Overrides"/>
+    public InputOverrides Overrides
+    {
+        get => Processor.Overrides;
+        set => Processor.Overrides = value;
+    }
+
     public override void OnEnable()
     {
         SyncSettings();
