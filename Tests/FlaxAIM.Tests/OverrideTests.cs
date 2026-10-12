@@ -108,6 +108,17 @@ public class OverrideTests : InputTestBase
     }
 
     [Test]
+    public void RowPastTheAssets_IsUsedWhole_WithItsTriggers()
+    {
+        _overrides.SetBinding(JumpRow(2), Button(GamepadButton.Y, new Triggers.TriggerHold { HoldTimeThreshold = 1f }));
+
+        Devices.Press(GamepadButton.Y);
+        Tick();
+
+        Assert.That(Input.GetActionState(_jump), Is.Not.EqualTo(State.EnhancedInputActionState.Triggered));
+    }
+
+    [Test]
     public void OverridesForAnotherContext_AreIgnored()
     {
         _overrides.SetBinding(new InputBindingKey("Elsewhere", _jump.ID, 0), Key(KeyboardKeys.J));
