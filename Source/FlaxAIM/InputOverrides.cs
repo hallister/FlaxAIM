@@ -24,7 +24,9 @@ public readonly record struct InputScaleKey(Guid Action, InputDevice Device);
 /// and it recompiles whenever the overrides change; several processors can share one.
 /// </summary>
 /// <remarks>
-/// A replacement only changes which control a binding reads (<see cref="InputMappingEntry.Control"/> and its keys or
+/// A row past the end of the action's inputs in that context adds a binding the asset doesn't have (a gamepad button
+/// for an action the asset only binds to a key), with no modifiers or triggers. A replacement only changes which
+/// control a binding reads (<see cref="InputMappingEntry.Control"/> and its keys or
 /// buttons). The binding's modifiers, triggers, axis settings and target stay as the asset has them, so a rebound jump
 /// still has its hold trigger. Overrides keyed to a context, action or row that doesn't exist are ignored.
 /// </remarks>
@@ -110,6 +112,21 @@ public sealed class InputOverrides
             foreach (var (key, scale) in scales)
                 if (scale != Float3.One) _scales[key] = scale;
         Changed?.Invoke();
+    }
+
+    /// <summary>
+    /// Adds the bindings past the asset's <paramref name="count"/> rows of <paramref name="action"/> in
+    /// <paramref name="context"/> to <paramref name="rows"/>, in row order, as plain bindings reading their controls.
+    /// </summary>
+    internal void AddRowsBeyond(string context, Guid action, int count, List<(int Row, InputMappingEntry Entry)> rows)
+    {
+        var start = rows.Count;
+        foreach (var (key, controls) in _bindings)
+        {
+            if (key.Row >= count && key.Action == action && key.Context == context)
+                rows.Add((key.Row, Apply(new InputMappingEntry(), controls)));
+        }
+        if (rows.Count - start > 1) rows.Sort(start, rows.Count - start, Comparer<(int Row, InputMappingEntry Entry)>.Create((a, b) => a.Row.CompareTo(b.Row)));
     }
 
     /// <summary>

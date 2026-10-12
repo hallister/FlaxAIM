@@ -110,6 +110,7 @@ public static class InputMappingCompiler
         var consumedByContext = new HashSet<int>();
         var bindingInputs = new List<int>();
         var placements = new List<Placement>(2);
+        var rows = new List<(int Row, InputMappingEntry Entry)>();
 
         foreach (var context in contextsByPriority)
         {
@@ -131,15 +132,22 @@ public static class InputMappingCompiler
                     map.Actions.Add(compiledAction);
                 }
 
-                if (mapping.Inputs == null) continue;
-
-                for (var row = 0; row < mapping.Inputs.Count; row++)
+                rows.Clear();
+                if (mapping.Inputs != null)
                 {
-                    var entry = mapping.Inputs[row];
-                    if (options.Overrides != null
-                        && options.Overrides.TryGetBinding(new InputBindingKey(context.ContextName, actionId, row), out var controls))
-                        entry = InputOverrides.Apply(entry, controls);
+                    for (var row = 0; row < mapping.Inputs.Count; row++)
+                    {
+                        var assetEntry = mapping.Inputs[row];
+                        if (options.Overrides != null
+                            && options.Overrides.TryGetBinding(new InputBindingKey(context.ContextName, actionId, row), out var controls))
+                            assetEntry = InputOverrides.Apply(assetEntry, controls);
+                        rows.Add((row, assetEntry));
+                    }
+                }
+                options.Overrides?.AddRowsBeyond(context.ContextName, actionId, mapping.Inputs?.Count ?? 0, rows);
 
+                foreach (var (row, entry) in rows)
+                {
                     // Players that only use a gamepad skip keyboard and mouse bindings entirely
                     if (!options.UseKeyboardAndMouse && entry.Control.Device() != InputDevice.Gamepad) continue;
 

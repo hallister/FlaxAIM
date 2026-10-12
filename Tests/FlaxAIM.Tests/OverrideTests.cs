@@ -97,6 +97,17 @@ public class OverrideTests : InputTestBase
     }
 
     [Test]
+    public void RowPastTheAssets_AddsABinding()
+    {
+        _overrides.SetBinding(JumpRow(2), Button(GamepadButton.Y));
+
+        Devices.Press(GamepadButton.Y);
+        Tick();
+
+        Assert.That(Input.GetActionValue(_jump).Digital, Is.True);
+    }
+
+    [Test]
     public void OverridesForAnotherContext_AreIgnored()
     {
         _overrides.SetBinding(new InputBindingKey("Elsewhere", _jump.ID, 0), Key(KeyboardKeys.J));
