@@ -13,9 +13,14 @@ namespace FlaxAIM;
 /// <param name="Row">The binding's index in the action's inputs within that context.</param>
 public readonly record struct InputBindingKey(string Context, Guid Action, int Row);
 
+/// <summary>An action's bindings on one device, scaled together (<see cref="InputOverrides.SetScale"/>).</summary>
+/// <param name="Action">The action's stable identity, as in <see cref="InputBindingKey.Action"/>.</param>
+/// <param name="Device">The device whose bindings of the action are scaled.</param>
+public readonly record struct InputScaleKey(Guid Action, InputDevice Device);
+
 /// <summary>
 /// A player's changes to the mapping assets, for rebinding and sensitivity settings: replacement controls for single
-/// bindings, and a scale on each action's final value. Give one to a processor (<see cref="InputProcessor.Overrides"/>)
+/// bindings, and a scale on an action's bindings of each device. Give one to a processor (<see cref="InputProcessor.Overrides"/>)
 /// and it recompiles whenever the overrides change; several processors can share one.
 /// </summary>
 /// <remarks>
@@ -26,7 +31,7 @@ public readonly record struct InputBindingKey(string Context, Guid Action, int R
 public sealed class InputOverrides
 {
     private readonly Dictionary<InputBindingKey, InputMappingEntry> _bindings = new();
-    private readonly Dictionary<Guid, Float3> _scales = new();
+    private readonly Dictionary<InputScaleKey, Float3> _scales = new();
 
     /// <summary>Raised after any change.</summary>
     public event Action Changed;
@@ -34,8 +39,8 @@ public sealed class InputOverrides
     /// <summary>The bindings with replacement controls, for saving them.</summary>
     public IReadOnlyDictionary<InputBindingKey, InputMappingEntry> Bindings => _bindings;
 
-    /// <summary>The actions with a scale, for saving them.</summary>
-    public IReadOnlyDictionary<Guid, Float3> Scales => _scales;
+    /// <summary>The scaled actions and devices, for saving them.</summary>
+    public IReadOnlyDictionary<InputScaleKey, Float3> Scales => _scales;
 
     /// <summary>
     /// Makes the binding at <paramref name="key"/> read <paramref name="controls"/>' control instead of the asset's.
@@ -60,27 +65,28 @@ public sealed class InputOverrides
     public bool TryGetBinding(InputBindingKey key, out InputMappingEntry controls) => _bindings.TryGetValue(key, out controls);
 
     /// <summary>
-    /// Multiplies the action's final value, after its own modifiers, by <paramref name="scale"/> per component: a
-    /// look sensitivity, or -1 on Y to invert it. <see cref="Float3.One"/> removes the scale.
+    /// Multiplies what the action's bindings on <paramref name="key"/>'s device read, after each binding's own
+    /// modifiers, by <paramref name="scale"/> per component: a mouse or gamepad look sensitivity, or -1 on Y to invert
+    /// it. <see cref="Float3.One"/> removes the scale.
     /// </summary>
-    public void SetScale(Guid action, Float3 scale)
+    public void SetScale(InputScaleKey key, Float3 scale)
     {
-        var had = _scales.TryGetValue(action, out var existing);
+        var had = _scales.TryGetValue(key, out var existing);
         if (scale == Float3.One)
         {
             if (!had) return;
-            _scales.Remove(action);
+            _scales.Remove(key);
         }
         else
         {
             if (had && existing == scale) return;
-            _scales[action] = scale;
+            _scales[key] = scale;
         }
         Changed?.Invoke();
     }
 
-    /// <summary>The scale on the action's final value; <see cref="Float3.One"/> when it has none.</summary>
-    public Float3 ScaleOf(Guid action) => _scales.TryGetValue(action, out var scale) ? scale : Float3.One;
+    /// <summary>The scale on the action's bindings of that device; <see cref="Float3.One"/> when there's none.</summary>
+    public Float3 ScaleOf(InputScaleKey key) => _scales.TryGetValue(key, out var scale) ? scale : Float3.One;
 
     /// <summary>Removes every override.</summary>
     public void Clear()
@@ -94,15 +100,15 @@ public sealed class InputOverrides
     /// <summary>
     /// Replaces every override at once, raising <see cref="Changed"/> a single time: for loading saved settings.
     /// </summary>
-    public void Load(IEnumerable<KeyValuePair<InputBindingKey, InputMappingEntry>> bindings, IEnumerable<KeyValuePair<Guid, Float3>> scales)
+    public void Load(IEnumerable<KeyValuePair<InputBindingKey, InputMappingEntry>> bindings, IEnumerable<KeyValuePair<InputScaleKey, Float3>> scales)
     {
         _bindings.Clear();
         _scales.Clear();
         if (bindings != null)
             foreach (var (key, controls) in bindings) _bindings[key] = controls;
         if (scales != null)
-            foreach (var (action, scale) in scales)
-                if (scale != Float3.One) _scales[action] = scale;
+            foreach (var (key, scale) in scales)
+                if (scale != Float3.One) _scales[key] = scale;
         Changed?.Invoke();
     }
 

@@ -23,7 +23,7 @@ public class OverrideTests : InputTestBase
         _look = Action("Look", InputActionType.Axis2D);
         _context = Context("Gameplay",
             Map(_jump, Key(KeyboardKeys.Spacebar), Button(GamepadButton.A)),
-            Map(_look, Axis(InputControl.RightStick)));
+            Map(_look, Axis(InputControl.RightStick), Axis(InputControl.MouseDelta)));
         Input.AddInputContext(_context);
         _overrides = new InputOverrides();
         Input.Overrides = _overrides;
@@ -107,10 +107,12 @@ public class OverrideTests : InputTestBase
         Assert.That(Input.GetActionValue(_jump).Digital, Is.True);
     }
 
+    private InputScaleKey LookOn(InputDevice device) => new(_look.ID, device);
+
     [Test]
-    public void Scale_MultipliesTheFinalValue_PerComponent()
+    public void Scale_MultipliesTheDevicesBindings_PerComponent()
     {
-        _overrides.SetScale(_look.ID, new Float3(2f, -1f, 1f));
+        _overrides.SetScale(LookOn(InputDevice.Gamepad), new Float3(2f, -1f, 1f));
 
         Devices.SetAxis(InputAxisType.GamepadRightStickX, 0.5f);
         Devices.SetAxis(InputAxisType.GamepadRightStickY, 0.5f);
@@ -120,13 +122,24 @@ public class OverrideTests : InputTestBase
     }
 
     [Test]
+    public void Scale_LeavesOtherDevicesAlone()
+    {
+        _overrides.SetScale(LookOn(InputDevice.Gamepad), new Float3(4f));
+
+        Devices.SetAxis(InputAxisType.MouseX, 0.5f);
+        Tick();
+
+        Assert.That(Input.GetActionValue(_look).Axis2D, Is.EqualTo(new Float2(0.5f, 0f)));
+    }
+
+    [Test]
     public void ScaleOfOne_IsRemoved()
     {
-        _overrides.SetScale(_look.ID, new Float3(2f));
-        _overrides.SetScale(_look.ID, Float3.One);
+        _overrides.SetScale(LookOn(InputDevice.Mouse), new Float3(2f));
+        _overrides.SetScale(LookOn(InputDevice.Mouse), Float3.One);
 
         Assert.That(_overrides.Scales, Is.Empty);
-        Assert.That(_overrides.ScaleOf(_look.ID), Is.EqualTo(Float3.One));
+        Assert.That(_overrides.ScaleOf(LookOn(InputDevice.Mouse)), Is.EqualTo(Float3.One));
     }
 
     [Test]
@@ -137,7 +150,7 @@ public class OverrideTests : InputTestBase
 
         _overrides.SetBinding(JumpRow(0), Key(KeyboardKeys.J));
         _overrides.SetBinding(JumpRow(0), Key(KeyboardKeys.J));
-        _overrides.SetScale(_look.ID, Float3.One);
+        _overrides.SetScale(LookOn(InputDevice.Mouse), Float3.One);
         _overrides.RemoveBinding(JumpRow(1));
 
         Assert.That(changes, Is.EqualTo(1));
@@ -149,10 +162,10 @@ public class OverrideTests : InputTestBase
         _overrides.SetBinding(JumpRow(1), Button(GamepadButton.B));
         _overrides.Load(
             [new(JumpRow(0), Key(KeyboardKeys.J))],
-            [new(_look.ID, new Float3(3f))]);
+            [new(LookOn(InputDevice.Mouse), new Float3(3f))]);
 
         Assert.That(_overrides.Bindings.Keys, Is.EquivalentTo(new[] { JumpRow(0) }));
-        Assert.That(_overrides.ScaleOf(_look.ID), Is.EqualTo(new Float3(3f)));
+        Assert.That(_overrides.ScaleOf(LookOn(InputDevice.Mouse)), Is.EqualTo(new Float3(3f)));
     }
 
     [Test]

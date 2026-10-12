@@ -134,7 +134,6 @@ public partial class InputProcessor
         }
 
         combined = ApplyModifiers(compiledAction.Modifiers, combined, action.ActionType);
-        if (compiledAction.Scale != Float3.One) combined *= compiledAction.Scale;
 
         var magnitude = action.ActionType switch
         {
@@ -179,7 +178,8 @@ public partial class InputProcessor
             value[input.Component] = raw;
         }
 
-        return ApplyModifiers(binding.Modifiers, value, actionType);
+        value = ApplyModifiers(binding.Modifiers, value, actionType);
+        return binding.Scale == Float3.One ? value : value * binding.Scale;
     }
 
     private static Float3 ApplyModifiers(InputModifier[] modifiers, Float3 value, InputActionType actionType)

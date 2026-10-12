@@ -81,7 +81,8 @@ Contexts are added to an `InputManager` with a priority; higher-priority context
 
 `InputOverrides` holds a player's changes without touching the assets. A binding is named by its context, its action
 and its row in that action's inputs; a replacement swaps only the control it reads, keeping the asset's modifiers and
-triggers. A scale multiplies an action's final value per component.
+triggers. A scale multiplies what an action's bindings on one device read, per component, so mouse and gamepad
+sensitivity stay separate.
 
 ```csharp
 var overrides = new InputOverrides();
@@ -91,8 +92,8 @@ _input.Overrides = overrides;
 overrides.SetBinding(new InputBindingKey("OnFoot", jumpAssetId, 0),
     new InputMappingEntry { Control = InputControl.Key, Key = KeyboardKeys.J });
 
-// Twice the look speed, with Y inverted
-overrides.SetScale(lookAssetId, new Float3(2f, -2f, 1f));
+// Twice the mouse look speed, with Y inverted
+overrides.SetScale(new InputScaleKey(lookAssetId, InputDevice.Mouse), new Float3(2f, -2f, 1f));
 ```
 
 Saving the overrides is the game's job: `Bindings` and `Scales` list them, and `Load` restores them in one change.

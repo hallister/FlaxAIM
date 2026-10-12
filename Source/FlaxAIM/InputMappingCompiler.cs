@@ -33,6 +33,9 @@ internal sealed class CompiledBinding
 
     /// <summary> This manager's own trigger instances, cloned from the asset's templates. </summary>
     public InputTrigger[] Triggers;
+
+    /// <summary> The player's scale on this binding's device (<see cref="InputOverrides.ScaleOf"/>), after its modifiers. </summary>
+    public Float3 Scale = Float3.One;
 }
 
 /// <summary>
@@ -53,8 +56,6 @@ internal sealed class CompiledAction
     /// <summary> Action-level triggers (cloned), evaluated against the combined value. </summary>
     public InputTrigger[] Triggers = [];
 
-    /// <summary> The player's scale on the final value (<see cref="InputOverrides.ScaleOf"/>). </summary>
-    public Float3 Scale = Float3.One;
 
     /// <summary> Actions that must be evaluated before this one (chords). </summary>
     public readonly List<Guid> Dependencies = [];
@@ -126,7 +127,6 @@ public static class InputMappingCompiler
                 if (!actionsById.TryGetValue(actionId, out var compiledAction))
                 {
                     compiledAction = CompileAction(action, actionId);
-                    if (options.Overrides != null) compiledAction.Scale = options.Overrides.ScaleOf(actionId);
                     actionsById[actionId] = compiledAction;
                     map.Actions.Add(compiledAction);
                 }
@@ -174,6 +174,7 @@ public static class InputMappingCompiler
                         Inputs = inputs,
                         Modifiers = CollectModifiers(entry.Modifiers),
                         Triggers = CloneTriggers(entry.Triggers, owner),
+                        Scale = options.Overrides?.ScaleOf(new InputScaleKey(actionId, entry.Control.Device())) ?? Float3.One,
                     };
                     AddChordDependencies(compiledAction, binding.Triggers);
                     compiledAction.Bindings.Add(binding);
