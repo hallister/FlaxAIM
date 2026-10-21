@@ -292,6 +292,30 @@ public class ContextTests : InputTestBase
     }
 
     [Test]
+    public void AnActionLevelPressedTrigger_KeepsItsStateThroughAContextChange()
+    {
+        var interact = Action("Interact");
+        interact.Triggers.Add(new TriggerPressed());
+        var onFoot = Context("OnFoot", Map(interact, Key(KeyboardKeys.F)));
+        var seated = Context("Seated", Map(interact, Key(KeyboardKeys.F)));
+        var presses = 0;
+        Input.BindAction(interact, S.Triggered, () =>
+        {
+            presses++;
+            Input.RemoveInputContext(onFoot);
+            Input.AddInputContext(seated);
+        });
+        Input.AddInputContext(onFoot);
+
+        Devices.Press(KeyboardKeys.F);
+        Tick();
+        Tick();
+        Tick();
+
+        Assert.That(presses, Is.EqualTo(1), "The action's own Pressed trigger isn't pressed again");
+    }
+
+    [Test]
     public void RemovingAndAddingContextsOutsideAnUpdate_KeepsHeldState()
     {
         var interact = Action("Interact");
