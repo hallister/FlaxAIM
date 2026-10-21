@@ -11,6 +11,14 @@ the minor version; compatible additions and fixes use a patch version (for examp
   IMC asset (a row past the asset's adds a binding, used whole with its own triggers and target, such as a gamepad button for a key-only action), and scale an action's bindings on one device per component (mouse or gamepad sensitivity, invert Y). Set it on
   `InputProcessor.Overrides` or `InputManager.Overrides`; processors recompile when it changes, and several can share one.
 - `InputCapture.GamepadButtonDown` for rebinding screens waiting for a gamepad button.
+- `InputTrigger.CarryStateFrom`, which custom triggers with their own state override (calling the base) so that state
+  survives recompiles.
+
+### Fixed
+
+- Adding or removing a context no longer resets the triggers of bindings that stay mapped. A key held through a context
+  change used to read as a new press (`TriggerPressed`) and restart holds (`TriggerHold`); bindings of the same action
+  reading the same inputs now keep their triggers' state, even when the binding comes from another context.
 
 ## [0.2] - 2026-09-30
 

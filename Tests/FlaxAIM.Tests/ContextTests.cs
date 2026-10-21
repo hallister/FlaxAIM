@@ -1,3 +1,4 @@
+using FlaxAIM.Triggers;
 using FlaxEngine;
 using NUnit.Framework;
 using static FlaxAIM.Tests.TestInput;
@@ -256,5 +257,115 @@ public class ContextTests : InputTestBase
         Devices.Press(GamepadButton.A, gamepad: 1);
         Tick();
         Assert.That(Input.GetActionState(_jump), Is.EqualTo(S.Triggered));
+    }
+
+    [Test]
+    public void AKeyHeldWhileItsActionMovesToAnotherContext_IsntPressedAgain()
+    {
+        // Interacting hands the player over to a seat whose context binds interact to the same key
+        var interact = Action("Interact");
+        var onFoot = Context("OnFoot", Map(interact, Key(KeyboardKeys.F, new TriggerPressed())));
+        var seated = Context("Seated", Map(interact, Key(KeyboardKeys.F, new TriggerPressed())));
+        var presses = 0;
+        Input.BindAction(interact, S.Triggered, () =>
+        {
+            presses++;
+            var leaving = Input.HasInputContext(onFoot) ? onFoot : seated;
+            Input.RemoveInputContext(leaving);
+            Input.AddInputContext(leaving == onFoot ? seated : onFoot);
+        });
+        Input.AddInputContext(onFoot);
+
+        Devices.Press(KeyboardKeys.F);
+        Tick();
+        Tick();
+        Tick();
+        Assert.That(presses, Is.EqualTo(1), "Holding F doesn't flip back and forth");
+        Assert.That(Input.HasInputContext(seated), Is.True);
+
+        Devices.ReleaseAll();
+        Tick();
+        Devices.Press(KeyboardKeys.F);
+        Tick();
+        Assert.That(presses, Is.EqualTo(2), "A new press still counts");
+        Assert.That(Input.HasInputContext(onFoot), Is.True);
+    }
+
+    [Test]
+    public void AnActionLevelPressedTrigger_KeepsItsStateThroughAContextChange()
+    {
+        var interact = Action("Interact");
+        interact.Triggers.Add(new TriggerPressed());
+        var onFoot = Context("OnFoot", Map(interact, Key(KeyboardKeys.F)));
+        var seated = Context("Seated", Map(interact, Key(KeyboardKeys.F)));
+        var presses = 0;
+        Input.BindAction(interact, S.Triggered, () =>
+        {
+            presses++;
+            Input.RemoveInputContext(onFoot);
+            Input.AddInputContext(seated);
+        });
+        Input.AddInputContext(onFoot);
+
+        Devices.Press(KeyboardKeys.F);
+        Tick();
+        Tick();
+        Tick();
+
+        Assert.That(presses, Is.EqualTo(1), "The action's own Pressed trigger isn't pressed again");
+    }
+
+    [Test]
+    public void RemovingAndAddingContextsOutsideAnUpdate_KeepsHeldState()
+    {
+        var interact = Action("Interact");
+        var onFoot = Context("OnFoot", Map(interact, Key(KeyboardKeys.F, new TriggerPressed())));
+        var seated = Context("Seated", Map(interact, Key(KeyboardKeys.F, new TriggerPressed())));
+        var presses = 0;
+        Input.BindAction(interact, S.Triggered, () => presses++);
+        Input.AddInputContext(onFoot);
+        Devices.Press(KeyboardKeys.F);
+        Tick();
+
+        // Two rebuilds between updates: the first has no binding for interact at all
+        Input.RemoveInputContext(onFoot);
+        Input.AddInputContext(seated);
+        Tick();
+
+        Assert.That(presses, Is.EqualTo(1));
+    }
+
+    [Test]
+    public void AHoldKeepsItsTimeThroughAContextChange()
+    {
+        var charge = Action("Charge");
+        Input.AddInputContext(Context("Gameplay", Map(charge, Key(KeyboardKeys.E, new TriggerHold { HoldTimeThreshold = 0.5f }))));
+        Devices.Press(KeyboardKeys.E);
+        Advance(0.3f);
+
+        Input.AddInputContext(_menu, 10);
+        Advance(0.3f);
+
+        Assert.That(Input.GetActionState(charge), Is.EqualTo(S.Triggered), "0.6 s held in all, across the change");
+    }
+
+    [Test]
+    public void ABindingToOtherKeys_StartsFresh()
+    {
+        var interact = Action("Interact");
+        var onFoot = Context("OnFoot", Map(interact, Key(KeyboardKeys.F, new TriggerPressed())));
+        var seated = Context("Seated", Map(interact, Key(KeyboardKeys.G, new TriggerPressed())));
+        var presses = 0;
+        Input.BindAction(interact, S.Triggered, () => presses++);
+        Input.AddInputContext(onFoot);
+        Devices.Press(KeyboardKeys.F);
+        Devices.Press(KeyboardKeys.G);
+        Tick();
+
+        Input.RemoveInputContext(onFoot);
+        Input.AddInputContext(seated);
+        Tick();
+
+        Assert.That(presses, Is.EqualTo(2), "G wasn't bound before, so holding it is a new press for the seat");
     }
 }

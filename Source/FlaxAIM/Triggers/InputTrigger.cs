@@ -69,6 +69,16 @@ public class InputTrigger : IInputTrigger
     }
 
     /// <summary>
+    /// Takes over the runtime state of an instance of the same type that this one replaces: a recompile (a context
+    /// added or removed) makes fresh instances, and a binding held through it shouldn't look newly pressed. Overrides
+    /// that keep their own state (a hold's timer) must call the base implementation.
+    /// </summary>
+    public virtual void CarryStateFrom(InputTrigger previous)
+    {
+        PreviousMagnitude = previous.PreviousMagnitude;
+    }
+
+    /// <summary>
     /// Creates the runtime copy of this template. The default is a shallow copy, so override it if a
     /// subclass keeps mutable reference-type state.
     /// </summary>
