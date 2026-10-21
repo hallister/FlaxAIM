@@ -25,6 +25,12 @@ public class TriggerHold : InputTrigger
         return EnhancedInputActionState.None;
     }
 
+    public override void CarryStateFrom(InputTrigger previous)
+    {
+        base.CarryStateFrom(previous);
+        _currentHoldTime = ((TriggerHold)previous)._currentHoldTime;
+    }
+
     public override void Reset()
     {
         base.Reset();

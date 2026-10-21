@@ -34,6 +34,13 @@ internal sealed class CompiledBinding
     /// <summary> This manager's own trigger instances, cloned from the asset's templates. </summary>
     public InputTrigger[] Triggers;
 
+    /// <summary>
+    /// The control and physical inputs this binding reads. A recompile matches bindings of the same action by it to carry
+    /// their trigger state over (<see cref="InputTrigger.CarryStateFrom"/>), even when the binding now comes from another
+    /// context.
+    /// </summary>
+    public string InputKey;
+
     /// <summary> The player's scale on this binding's device (<see cref="InputOverrides.ScaleOf"/>), after its modifiers. </summary>
     public Float3 Scale = Float3.One;
 }
@@ -183,6 +190,7 @@ public static class InputMappingCompiler
                         Modifiers = CollectModifiers(entry.Modifiers),
                         Triggers = CloneTriggers(entry.Triggers, owner),
                         Scale = options.Overrides?.ScaleOf(new InputScaleKey(actionId, entry.Control.Device())) ?? Float3.One,
+                        InputKey = InputKeyOf(entry.Control, bindingInputs),
                     };
                     AddChordDependencies(compiledAction, binding.Triggers);
                     compiledAction.Bindings.Add(binding);
@@ -199,6 +207,51 @@ public static class InputMappingCompiler
 
         InputLog.Info($"Compiled {contextsByPriority.Count} context(s): {map.Actions.Count} action(s), {actionConfigs.Count + axisConfigs.Count} virtual input(s).");
         return map;
+    }
+
+    private static string InputKeyOf(InputControl control, List<int> inputs)
+    {
+        var sorted = inputs.ToArray();
+        Array.Sort(sorted);
+        return $"{(int)control}:{string.Join(",", sorted)}";
+    }
+
+    /// <summary>
+    /// Carries trigger state from a previous compile to a new one, so a recompile (a context added or removed) doesn't
+    /// look like a fresh press to a binding held through it. Bindings match by action and the inputs they read; their
+    /// triggers match by position and type. Action-level triggers match by action.
+    /// </summary>
+    internal static void CarryTriggerState(CompiledInputMap previous, CompiledInputMap next)
+    {
+        if (previous == null || previous.Actions.Count == 0) return;
+
+        var previousById = new Dictionary<Guid, CompiledAction>(previous.Actions.Count);
+        foreach (var action in previous.Actions) previousById[action.Id] = action;
+
+        var claimed = new HashSet<CompiledBinding>();
+        foreach (var action in next.Actions)
+        {
+            if (!previousById.TryGetValue(action.Id, out var before)) continue;
+
+            CarryTriggers(before.Triggers, action.Triggers);
+            foreach (var binding in action.Bindings)
+            {
+                // Several bindings reading the same inputs pair up in order
+                var match = before.Bindings.Find(b => b.InputKey == binding.InputKey && !claimed.Contains(b));
+                if (match == null) continue;
+                claimed.Add(match);
+                CarryTriggers(match.Triggers, binding.Triggers);
+            }
+        }
+    }
+
+    private static void CarryTriggers(InputTrigger[] from, InputTrigger[] to)
+    {
+        var count = Math.Min(from.Length, to.Length);
+        for (var i = 0; i < count; i++)
+        {
+            if (from[i].GetType() == to[i].GetType()) to[i].CarryStateFrom(from[i]);
+        }
     }
 
     private static CompiledAction CompileAction(InputAction action, Guid actionId)

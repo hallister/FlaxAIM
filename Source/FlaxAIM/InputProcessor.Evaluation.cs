@@ -31,6 +31,7 @@ public partial class InputProcessor
         if (!IsEnabled) return;
 
         _isUpdating = true;
+        _stateSource = null;
         try
         {
             foreach (var tracker in _trackers.Values) tracker.MoveToNextFrame();

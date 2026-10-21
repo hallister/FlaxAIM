@@ -36,6 +36,10 @@ public partial class InputProcessor
     private bool _isUpdating;
     private bool _rebuildPending;
 
+    // The compile whose triggers last saw input: every rebuild before the next update carries trigger state from it,
+    // so removing one context and then adding another keeps the state of bindings both of them have
+    private CompiledInputMap _stateSource;
+
     /// <summary>
     /// Magnitude a binding with no triggers must reach to trigger its action.
     /// </summary>
@@ -107,6 +111,7 @@ public partial class InputProcessor
         IsEnabled = false;
         VirtualInputRegistry.Remove(this);
         _compiled = CompiledInputMap.Empty;
+        _stateSource = null;
         _trackers.Clear();
     }
 
@@ -174,7 +179,8 @@ public partial class InputProcessor
     /// <summary>
     /// Recompiles the active contexts from highest to lowest priority and publishes them to Flax's input tables.
     /// Call after changing context or action data at runtime. Actions that are no longer mapped are flushed
-    /// (Completed/Canceled) on the next update.
+    /// (Completed/Canceled) on the next update. Bindings that are still mapped, even from another context, keep their
+    /// triggers' state, so a key held through a context change isn't pressed again.
     /// </summary>
     public void RebuildMappings()
     {
@@ -197,7 +203,9 @@ public partial class InputProcessor
             Overrides = _overrides,
         };
 
+        _stateSource ??= _compiled;
         _compiled = InputMappingCompiler.Compile(ordered.ConvertAll(e => e.Context), options);
+        InputMappingCompiler.CarryTriggerState(_stateSource, _compiled);
 
         if (_compiled.ActionConfigs.Length + _compiled.AxisConfigs.Length > 0)
             VirtualInputRegistry.Set(this, _compiled.ActionConfigs, _compiled.AxisConfigs);

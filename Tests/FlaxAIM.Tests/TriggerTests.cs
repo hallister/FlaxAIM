@@ -79,4 +79,21 @@ public class TriggerTests
         Assert.That(new TriggerHold().TriggerType, Is.EqualTo(TriggerType.Explicit));
         Assert.That(new TriggerPressed().TriggerType, Is.EqualTo(TriggerType.Explicit));
     }
+
+    [Test]
+    public void CarryStateFrom_TakesOverThePreviousInstancesState()
+    {
+        var oldPressed = new TriggerPressed().CreateInstance();
+        Eval(oldPressed, 1f);
+        var pressed = new TriggerPressed().CreateInstance();
+        pressed.CarryStateFrom(oldPressed);
+        Assert.That(Eval(pressed, 1f), Is.EqualTo(S.None), "Still held, not a new press");
+
+        var oldHold = new TriggerHold { HoldTimeThreshold = 0.25f }.CreateInstance();
+        Eval(oldHold, 1f);
+        Eval(oldHold, 1f);
+        var hold = new TriggerHold { HoldTimeThreshold = 0.25f }.CreateInstance();
+        hold.CarryStateFrom(oldHold);
+        Assert.That(Eval(hold, 1f), Is.EqualTo(S.Triggered), "The hold time carried over");
+    }
 }
