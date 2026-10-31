@@ -24,7 +24,7 @@ foreach ($file in @($buildTool, $editor)) {
     if (!(Test-Path -LiteralPath $file)) { throw "Missing Flax executable: $file" }
 }
 
-& $buildTool -build -mutex "-workspace=$examples" -arch=x64 -configuration=Development -platform=Windows -buildtargets=FlaxAIMExamplesEditorTarget 2>&1 | Tee-Object -FilePath (Join-Path $results 'build.log')
+& $buildTool -build -mutex "-workspace=$examples" -arch=x64 -configuration=Development -platform=Windows -buildtargets=FlaxAIMExamplesEditorTarget -verbose 2>&1 | Tee-Object -FilePath (Join-Path $results 'build.log')
 if ($LASTEXITCODE -ne 0) { throw "Examples build failed with exit code $LASTEXITCODE." }
 
 # Flax's Windows editor can leave redirected stdout empty even with -std. Match its native log to
