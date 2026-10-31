@@ -128,7 +128,6 @@ public static class InputMappingCompiler
             for (var mappingIndex = 0; mappingIndex < context.Mappings.Count; mappingIndex++)
             {
                 var mapping = context.Mappings[mappingIndex];
-                if (mapping == null) continue;
                 var action = mapping.RuntimeAction ?? mapping.InputAction.Instance;
                 if (action == null) continue;
 

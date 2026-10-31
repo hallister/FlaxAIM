@@ -24,16 +24,8 @@ foreach ($file in @($buildTool, $editor)) {
     if (!(Test-Path -LiteralPath $file)) { throw "Missing Flax executable: $file" }
 }
 
-& $buildTool -build -mutex "-workspace=$examples" -arch=x64 -configuration=Development -platform=Windows -buildtargets=FlaxAIMExamplesEditorTarget -verbose 2>&1 | Tee-Object -FilePath (Join-Path $results 'build.log')
-if ($LASTEXITCODE -ne 0) {
-    # TEMP: Flax.Build doesn't forward csc's diagnostics; run the failed compile again to print them
-    Get-ChildItem -Path $repoRoot, $examples -Recurse -Filter '*.CSharp.response' -ErrorAction SilentlyContinue | ForEach-Object {
-        Write-Host "=== $($_.FullName)"
-        $csc = Get-ChildItem 'C:\Program Files\dotnet\sdk' -Recurse -Filter csc.dll | Where-Object { $_.FullName -like '*Roslyn\bincore*' } | Select-Object -First 1
-        & dotnet exec $csc.FullName /noconfig "@$($_.FullName)" 2>&1 | Select-String -Pattern 'error|warning CS' | Select-Object -First 40 | ForEach-Object { Write-Host $_ }
-    }
-    throw "Examples build failed with exit code $LASTEXITCODE."
-}
+& $buildTool -build -mutex "-workspace=$examples" -arch=x64 -configuration=Development -platform=Windows -buildtargets=FlaxAIMExamplesEditorTarget 2>&1 | Tee-Object -FilePath (Join-Path $results 'build.log')
+if ($LASTEXITCODE -ne 0) { throw "Examples build failed with exit code $LASTEXITCODE." }
 
 # Flax's Windows editor can leave redirected stdout empty even with -std. Match its native log to
 # a unique command-line marker, so neither an older run nor another editor can supply the result.

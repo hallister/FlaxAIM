@@ -40,7 +40,7 @@
 
   <Target Name="BuildFlaxAIM" BeforeTargets="ResolveAssemblyReferences" Condition="'$(SkipFlaxBuild)' != 'true'">
     <Exec Command="&quot;$(FlaxEnginePath)\Binaries\Tools\Flax.Build.exe&quot; -build -mutex -workspace=&quot;$(FlaxAIMProjectDir)&quot; -arch=x64 -configuration=Development -platform=Windows -buildtargets=FlaxAIMEditorTarget"
-          StandardOutputImportance="high" />
+          StandardOutputImportance="low" />
   </Target>
 
 </Project>
