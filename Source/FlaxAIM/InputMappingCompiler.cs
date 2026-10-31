@@ -212,15 +212,15 @@ public static class InputMappingCompiler
         return map;
     }
 
+    // Context names already warned about being shared, so recompiles don't repeat it
+    private static readonly HashSet<string> WarnedNames = new();
+
     /// <summary>
     /// The Flax virtual input name of one input of a binding. It's built from where the binding is (its context, mapping,
     /// row and component), not from its place among everything compiled, so it stays the same when other contexts are
     /// added or removed: Flax keeps a virtual axis's keyboard smoothing (sensitivity, gravity) under its name, and a new
     /// name starts again from 0, so a key held through a context change would ease in again from nothing.
     /// </summary>
-    // Context names already warned about being shared, so recompiles don't repeat it
-    private static readonly HashSet<string> WarnedNames = new();
-
     private static string VirtualNameOf(int managerId, InputMappingContext context, int mapping, int row, int component,
         InputAction action, HashSet<string> taken)
     {
