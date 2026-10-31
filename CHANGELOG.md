@@ -19,6 +19,10 @@ the minor version; compatible additions and fixes use a patch version (for examp
 - Adding or removing a context no longer resets the triggers of bindings that stay mapped. A key held through a context
   change used to read as a new press (`TriggerPressed`) and restart holds (`TriggerHold`); bindings of the same action
   reading the same inputs now keep their triggers' state, even when the binding comes from another context.
+- Adding or removing a context no longer renames the Flax virtual inputs of the other contexts' bindings. Names were
+  numbered by position, so a context coming or going shifted everything below it, and Flax restarted those axes'
+  keyboard smoothing from 0: a movement key held through a tool or weapon switch eased in again as if just pressed.
+  Names now come from the binding's context, mapping and row.
 
 ## [0.2] - 2026-09-30
 

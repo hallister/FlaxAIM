@@ -36,6 +36,37 @@ public class CompilerTests
     }
 
     [Test]
+    public void VirtualInputNames_StayTheSameWhenOtherContextsComeAndGo()
+    {
+        // Flax keeps a virtual axis's keyboard smoothing under its name: a held key whose binding is renamed eases in
+        // again from 0, so a higher-priority context coming or going mustn't rename the bindings below it
+        var move = Action("Move", InputActionType.Axis2D);
+        var fire = Action("Fire");
+        var reload = Action("Reload");
+        var onFoot = Context("OnFoot", Map(move, Keys(KeyboardKeys.D, KeyboardKeys.A), Keys(KeyboardKeys.W, KeyboardKeys.S, InputAxisTarget.Y)));
+        var weapon = Context("Weapon", Map(fire, Key(KeyboardKeys.F)), Map(reload, Key(KeyboardKeys.R)));
+        var tool = Context("Tool", Map(fire, Key(KeyboardKeys.G)));
+
+        var alone = InputMappingCompiler.Compile([onFoot], Options).AxisConfigs.Select(c => c.Name).ToArray();
+        var underWeapon = InputMappingCompiler.Compile([weapon, onFoot], Options).AxisConfigs.Select(c => c.Name).ToArray();
+        var underTool = InputMappingCompiler.Compile([tool, onFoot], Options).AxisConfigs.Select(c => c.Name).ToArray();
+
+        Assert.That(alone, Has.Length.EqualTo(2));
+        Assert.That(underWeapon, Is.EqualTo(alone));
+        Assert.That(underTool, Is.EqualTo(alone));
+    }
+
+    [Test]
+    public void ContextsWithTheSameName_StillGetTheirOwnVirtualInputs()
+    {
+        var jump = Action("Jump");
+        var map = InputMappingCompiler.Compile([Context("Gameplay", Map(jump, Key(KeyboardKeys.Spacebar))),
+            Context("Gameplay", Map(jump, Key(KeyboardKeys.J)))], Options);
+
+        Assert.That(map.ActionConfigs.Select(c => c.Name).ToArray(), Has.Length.EqualTo(2).And.Unique);
+    }
+
+    [Test]
     public void AxisSettings_AreCopiedToTheConfig()
     {
         var throttle = Action("Throttle", InputActionType.Axis1D);
