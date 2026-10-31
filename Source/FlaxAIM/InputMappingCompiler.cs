@@ -118,14 +118,16 @@ public static class InputMappingCompiler
         var bindingInputs = new List<int>();
         var placements = new List<Placement>(2);
         var rows = new List<(int Row, InputMappingEntry Entry)>();
+        var virtualNames = new HashSet<string>();
 
         foreach (var context in contextsByPriority)
         {
             if (context?.Mappings == null) continue;
             consumedByContext.Clear();
 
-            foreach (var mapping in context.Mappings)
+            for (var mappingIndex = 0; mappingIndex < context.Mappings.Count; mappingIndex++)
             {
+                var mapping = context.Mappings[mappingIndex];
                 var action = mapping.RuntimeAction ?? mapping.InputAction.Instance;
                 if (action == null) continue;
 
@@ -173,7 +175,7 @@ public static class InputMappingCompiler
                     for (var i = 0; i < placements.Count; i++)
                     {
                         var placement = placements[i];
-                        var virtualName = $"{VirtualInputRegistry.NamePrefix}{options.ManagerId}:{actionConfigs.Count + axisConfigs.Count}:{action.Name}";
+                        var virtualName = VirtualNameOf(options.ManagerId, context, mappingIndex, row, i, action, virtualNames);
                         var isAxis = !entry.Control.IsButton();
 
                         if (isAxis)
@@ -207,6 +209,31 @@ public static class InputMappingCompiler
 
         InputLog.Info($"Compiled {contextsByPriority.Count} context(s): {map.Actions.Count} action(s), {actionConfigs.Count + axisConfigs.Count} virtual input(s).");
         return map;
+    }
+
+    // Context names already warned about being shared, so recompiles don't repeat it
+    private static readonly HashSet<string> WarnedNames = new();
+
+    /// <summary>
+    /// The Flax virtual input name of one input of a binding. It's built from where the binding is (its context, mapping,
+    /// row and component), not from its place among everything compiled, so it stays the same when other contexts are
+    /// added or removed: Flax keeps a virtual axis's keyboard smoothing (sensitivity, gravity) under its name, and a new
+    /// name starts again from 0, so a key held through a context change would ease in again from nothing.
+    /// </summary>
+    private static string VirtualNameOf(int managerId, InputMappingContext context, int mapping, int row, int component,
+        InputAction action, HashSet<string> taken)
+    {
+        var name = $"{VirtualInputRegistry.NamePrefix}{managerId}:{context.ContextName}:{mapping}:{row}:{component}:{action.Name}";
+        if (taken.Add(name))
+            return name;
+        // Two contexts with the same name: the lower one's inputs take a suffix, which shifts as the higher one comes and
+        // goes (its held keys would ease in again), and the player's overrides can't tell the two apart either
+        if (WarnedNames.Add(context.ContextName ?? string.Empty))
+            InputLog.Warning($"Two input contexts are both named '{context.ContextName}': give each its own name. Bindings of the lower-priority one may restart their smoothing when the other is added or removed.");
+        var unique = name;
+        for (var n = 2; !taken.Add(unique); n++)
+            unique = $"{name}#{n}";
+        return unique;
     }
 
     private static string InputKeyOf(InputControl control, List<int> inputs)
