@@ -60,10 +60,11 @@ public class CompilerTests
     public void ContextsWithTheSameName_StillGetTheirOwnVirtualInputs()
     {
         var jump = Action("Jump");
-        var map = InputMappingCompiler.Compile([Context("Gameplay", Map(jump, Key(KeyboardKeys.Spacebar))),
-            Context("Gameplay", Map(jump, Key(KeyboardKeys.J)))], Options);
+        var map = InputMappingCompiler.Compile([Context("Shared", Map(jump, Key(KeyboardKeys.Spacebar))),
+            Context("Shared", Map(jump, Key(KeyboardKeys.J)))], Options);
 
         Assert.That(map.ActionConfigs.Select(c => c.Name).ToArray(), Has.Length.EqualTo(2).And.Unique);
+        Assert.That(TestEnvironment.Warnings, Has.Some.Contains("both named 'Shared'"), "named once, as a config mistake");
     }
 
     [Test]

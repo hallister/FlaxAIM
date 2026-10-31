@@ -218,11 +218,19 @@ public static class InputMappingCompiler
     /// added or removed: Flax keeps a virtual axis's keyboard smoothing (sensitivity, gravity) under its name, and a new
     /// name starts again from 0, so a key held through a context change would ease in again from nothing.
     /// </summary>
+    // Context names already warned about being shared, so recompiles don't repeat it
+    private static readonly HashSet<string> WarnedNames = new();
+
     private static string VirtualNameOf(int managerId, InputMappingContext context, int mapping, int row, int component,
         InputAction action, HashSet<string> taken)
     {
         var name = $"{VirtualInputRegistry.NamePrefix}{managerId}:{context.ContextName}:{mapping}:{row}:{component}:{action.Name}";
-        // Two contexts with the same name: the later one's inputs take a suffix
+        if (taken.Add(name))
+            return name;
+        // Two contexts with the same name: the lower one's inputs take a suffix, which shifts as the higher one comes and
+        // goes (its held keys would ease in again), and the player's overrides can't tell the two apart either
+        if (WarnedNames.Add(context.ContextName ?? string.Empty))
+            InputLog.Warning($"Two input contexts are both named '{context.ContextName}': give each its own name. Bindings of the lower-priority one may restart their smoothing when the other is added or removed.");
         var unique = name;
         for (var n = 2; !taken.Add(unique); n++)
             unique = $"{name}#{n}";
