@@ -10,6 +10,10 @@ the minor version; compatible additions and fixes use a patch version (for examp
 - `InputOverrides` for player settings: replace the control a single binding reads (rebinding) without editing the
   IMC asset (a row past the asset's adds a binding, used whole with its own triggers and target, such as a gamepad button for a key-only action), and scale an action's bindings on one device per component (mouse or gamepad sensitivity, invert Y). Set it on
   `InputProcessor.Overrides` or `InputManager.Overrides`; processors recompile when it changes, and several can share one.
+- `ModifierScaleByDeltaTime`, which multiplies a value by the frame time, so a stick bound to an action that reads a
+  per-frame amount (a look action also bound to the mouse delta) turns at a rate that doesn't depend on the frame rate.
+  Modifiers that need the frame time override the new `InputModifier.Modify(Float3, InputActionType, float)`, which the
+  processor now calls; by default it calls the overload of the action's dimension, so existing modifiers are unchanged.
 - `InputCapture.GamepadButtonDown` for rebinding screens waiting for a gamepad button.
 - `InputTrigger.CarryStateFrom`, which custom triggers with their own state override (calling the base) so that state
   survives recompiles.

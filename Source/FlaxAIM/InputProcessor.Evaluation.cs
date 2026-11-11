@@ -127,14 +127,14 @@ public partial class InputProcessor
 
         foreach (var binding in compiledAction.Bindings)
         {
-            var value = ReadBinding(binding, action.ActionType);
+            var value = ReadBinding(binding, action.ActionType, deltaTime);
             combined = new Float3(HighestAbs(combined.X, value.X), HighestAbs(combined.Y, value.Y), HighestAbs(combined.Z, value.Z));
 
             var bindingState = EvaluateTriggers(binding.Triggers, action, deltaTime, value.Length);
             if (bindingState > state) state = bindingState;
         }
 
-        combined = ApplyModifiers(compiledAction.Modifiers, combined, action.ActionType);
+        combined = ApplyModifiers(compiledAction.Modifiers, combined, action.ActionType, deltaTime);
 
         var magnitude = action.ActionType switch
         {
@@ -166,7 +166,7 @@ public partial class InputProcessor
     /// <summary>
     /// Reads one binding's raw inputs, places each in its target component and applies the binding's modifiers.
     /// </summary>
-    private static Float3 ReadBinding(CompiledBinding binding, InputActionType actionType)
+    private static Float3 ReadBinding(CompiledBinding binding, InputActionType actionType, float deltaTime)
     {
         var backend = VirtualInputRegistry.Backend;
         var value = Float3.Zero;
@@ -179,28 +179,14 @@ public partial class InputProcessor
             value[input.Component] = raw;
         }
 
-        value = ApplyModifiers(binding.Modifiers, value, actionType);
+        value = ApplyModifiers(binding.Modifiers, value, actionType, deltaTime);
         return binding.Scale == Float3.One ? value : value * binding.Scale;
     }
 
-    private static Float3 ApplyModifiers(InputModifier[] modifiers, Float3 value, InputActionType actionType)
+    private static Float3 ApplyModifiers(InputModifier[] modifiers, Float3 value, InputActionType actionType, float deltaTime)
     {
         foreach (var modifier in modifiers)
-        {
-            switch (actionType)
-            {
-                case InputActionType.Axis2D:
-                    var modified = modifier.Modify(new Float2(value.X, value.Y));
-                    value = new Float3(modified.X, modified.Y, 0f);
-                    break;
-                case InputActionType.Axis3D:
-                    value = modifier.Modify(value);
-                    break;
-                default:
-                    value = new Float3(modifier.Modify(value.X), 0f, 0f);
-                    break;
-            }
-        }
+            value = modifier.Modify(value, actionType, deltaTime);
 
         return value;
     }
