@@ -91,6 +91,25 @@ public class ModifierTests
         Assert.That(nothing.Modify(new Float2(1f, 2f)), Is.EqualTo(new Float2(1f, 2f)));
     }
 
+    [Test]
+    public void ScaleByDeltaTime_MultipliesByTheFrameTime()
+    {
+        var perFrame = new ModifierScaleByDeltaTime();
+
+        Assert.That(perFrame.Modify(new Float3(1f, -0.5f, 0f), InputActionType.Axis2D, 0.5f), Is.EqualTo(new Float3(0.5f, -0.25f, 0f)));
+        Assert.That(perFrame.Modify(new Float3(2f, 0f, 0f), InputActionType.Axis1D, 0.25f).X, Is.EqualTo(0.5f).Within(Tolerance));
+        Assert.That(perFrame.Modify(new Float3(1f, 2f, 3f), InputActionType.Axis3D, 0.5f), Is.EqualTo(new Float3(0.5f, 1f, 1.5f)));
+    }
+
+    [Test]
+    public void FrameTimeOverload_CallsTheActionsDimension()
+    {
+        var doubler = new Float3Only();
+
+        Assert.That(doubler.Modify(new Float3(1f, 2f, 3f), InputActionType.Axis2D, 1f), Is.EqualTo(new Float3(2f, 4f, 0f)), "Axis2D drops Z");
+        Assert.That(doubler.Modify(new Float3(1f, 2f, 3f), InputActionType.Axis1D, 1f), Is.EqualTo(new Float3(2f, 0f, 0f)), "Axis1D keeps X");
+    }
+
     private sealed class Float3Only : InputModifier
     {
         public override string Name => "Double";

@@ -182,6 +182,28 @@ public class EvaluationTests : InputTestBase
     }
 
     [Test]
+    public void ScaleByDeltaTime_TurnsAStickIntoTheSameAmountPerSecondAtAnyFrameRate()
+    {
+        var look = Action("Look", InputActionType.Axis2D);
+        Input.AddInputContext(Context("Gameplay", Map(look,
+            Axis(InputControl.RightStick).With(new ModifierScaleByDeltaTime(), new ModifierScale { ScaleX = 180f, ScaleY = 90f }))));
+        Devices.SetAxis(InputAxisType.GamepadRightStickX, 1f);
+        Devices.SetAxis(InputAxisType.GamepadRightStickY, -1f);
+
+        foreach (var frame in new[] { 1f / 30f, 1f / 144f })
+        {
+            var turned = Float2.Zero;
+            for (var elapsed = 0f; elapsed < 1f - 0.0001f; elapsed += frame)
+            {
+                Tick(frame);
+                turned += Input.GetActionValue(look).Axis2D;
+            }
+            Assert.That(turned.X, Is.EqualTo(180f).Within(0.01f), $"X at {1f / frame:0} fps");
+            Assert.That(turned.Y, Is.EqualTo(-90f).Within(0.01f), $"Y at {1f / frame:0} fps");
+        }
+    }
+
+    [Test]
     public void Axis3D_BindingsCanTargetZ()
     {
         var fly = Action("Fly", InputActionType.Axis3D);

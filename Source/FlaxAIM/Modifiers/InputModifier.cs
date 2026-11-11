@@ -26,4 +26,24 @@ public abstract class InputModifier
     {
         return value;
     }
+
+    /// <summary>
+    /// Modifies a value of an action of <paramref name="actionType"/> during a frame lasting <paramref name="deltaTime"/>
+    /// seconds. This is what the processor calls: by default it calls the overload of the action's dimension (Axis2D →
+    /// Float2, Axis3D → Float3, anything else → float, in X), so override it only for a modifier that needs the frame
+    /// time, such as <see cref="ModifierScaleByDeltaTime"/>.
+    /// </summary>
+    public virtual Float3 Modify(Float3 value, InputActionType actionType, float deltaTime)
+    {
+        switch (actionType)
+        {
+            case InputActionType.Axis2D:
+                var modified = Modify(new Float2(value.X, value.Y));
+                return new Float3(modified.X, modified.Y, 0f);
+            case InputActionType.Axis3D:
+                return Modify(value);
+            default:
+                return new Float3(Modify(value.X), 0f, 0f);
+        }
+    }
 }
