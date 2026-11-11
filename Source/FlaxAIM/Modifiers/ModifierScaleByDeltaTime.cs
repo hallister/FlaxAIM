@@ -10,7 +10,9 @@ namespace FlaxAIM.Modifiers;
 /// </summary>
 /// <remarks>
 /// Only the processor knows the frame time, so the plain <see cref="InputModifier.Modify(float)"/> overloads pass
-/// values through unchanged.
+/// values through unchanged. Triggers see the scaled, per-frame value, so a stick at part tilt can stay under the
+/// actuation threshold and leave the action untriggered, as a slow mouse does: read such an action's value
+/// (<see cref="InputProcessor.GetActionValue(InputAction)"/>), which is set whatever its state.
 /// </remarks>
 public class ModifierScaleByDeltaTime : InputModifier
 {
